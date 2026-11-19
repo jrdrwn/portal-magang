@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
 import { setUserActive } from "@/actions/admin";
 import { resetPassword } from "@/actions/password-reset";
 import { ActionButton } from "@/components/ui/form";
@@ -44,7 +44,11 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
     include: {
       profile: true,
       registrations: {
-        include: { team: { select: { name: true } } },
+        include: {
+          team: { select: { name: true } },
+          certificate: { select: { id: true, number: true } },
+          survey: { select: { id: true } },
+        },
         orderBy: { startDate: "desc" },
       },
       evaluations: {
@@ -170,6 +174,16 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
                         {registrationLabel[r.status].label}
                       </Badge>
                     </div>
+                    {r.certificate ? (
+                      <Link
+                        href={`/cetak/sertifikat/${r.certificate.id}`}
+                        className="mt-2 inline-block text-xs font-semibold text-brand-700 hover:underline"
+                      >
+                        Sertifikat {r.certificate.number} <ArrowRight className="inline size-3" aria-hidden />
+                      </Link>
+                    ) : r.status === "APPROVED" && r.endDate <= new Date() && !r.survey ? (
+                      <p className="mt-2 text-xs text-muted">Periode selesai, menunggu peserta mengisi survei.</p>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -211,8 +225,7 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
             {attendances.length === 0 ? (
               <EmptyState title="Belum ada absensi" />
             ) : (
-              <div className="max-h-96 overflow-y-auto">
-                <Table>
+              <Table className="max-h-96 overflow-y-auto">
                   <thead>
                     <tr>
                       <Th>Tanggal</Th>
@@ -255,8 +268,7 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
                       </tr>
                     ))}
                   </tbody>
-                </Table>
-              </div>
+              </Table>
             )}
           </Card>
 

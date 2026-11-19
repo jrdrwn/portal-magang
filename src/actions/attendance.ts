@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireIntern } from "@/lib/auth";
+import { notifyTeamAdmins } from "@/lib/notifications";
 import { minutesOfDay, parseClock, todayDate } from "@/lib/dates";
 import { distanceMeters, formatDistance } from "@/lib/geo";
 import { getActiveRegistration, getOfficeSetting } from "@/lib/queries";
@@ -184,6 +185,13 @@ export async function submitAbsence(formData: FormData): Promise<ActionResult> {
   } catch {
     return failure("Anda sudah mencatat kehadiran hari ini.");
   }
+
+  await notifyTeamAdmins(registration.teamId, {
+    type: "ABSENCE_REPORTED",
+    title: `${user.name} ${label.toLowerCase()} hari ini`,
+    body: parsed.data.note,
+    href: "/admin/absensi",
+  });
 
   refresh();
   return success(`${label} tercatat untuk hari ini.`);

@@ -9,6 +9,8 @@ const INTERN_PATHS = [
   "/aktivitas",
   "/pendaftaran",
   "/evaluasi",
+  "/sertifikat",
+  "/notifikasi",
   "/profil",
 ];
 const AUTH_PATHS = ["/login", "/daftar"];
@@ -47,6 +49,8 @@ export const config = {
     "/aktivitas/:path*",
     "/pendaftaran/:path*",
     "/evaluasi/:path*",
+    "/sertifikat/:path*",
+    "/notifikasi/:path*",
     "/profil/:path*",
     "/admin/:path*",
   ],

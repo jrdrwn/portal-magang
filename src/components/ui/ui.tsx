@@ -221,9 +221,9 @@ export function ButtonLink({
 export const inputClass =
   "w-full rounded-2xl border border-line bg-canvas/60 px-4 py-3 text-sm outline-none transition placeholder:text-muted/70 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100 disabled:opacity-60";
 
-export function Table({ children }: { children: ReactNode }) {
+export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className="-mx-2 overflow-x-auto px-2">
+    <div className={clsx("-mx-2 overflow-x-auto px-2", className)}>
       <table className="w-full min-w-[640px] text-left text-sm">{children}</table>
     </div>
   );
@@ -233,7 +233,7 @@ export function Th({ children, className }: { children?: ReactNode; className?: 
   return (
     <th
       className={clsx(
-        "whitespace-nowrap px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted",
+        "sticky top-0 z-10 whitespace-nowrap bg-surface px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted",
         className,
       )}
     >

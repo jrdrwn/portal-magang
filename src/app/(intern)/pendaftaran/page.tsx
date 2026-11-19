@@ -38,7 +38,7 @@ export default async function RegistrationPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1.1fr]">
-        <Card className="h-fit">
+        <Card className="h-fit xl:sticky xl:top-6 self-start">
           <CardTitle title="Ajukan periode baru" />
           {teams.length === 0 ? (
             <EmptyState

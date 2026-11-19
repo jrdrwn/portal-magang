@@ -56,8 +56,10 @@ model User {
   registrations Registration[]
   attendances   Attendance[]
   activities    Activity[]
-  evaluations   Evaluation[]   @relation("EvaluationIntern")
-  evaluationsBy Evaluation[]   @relation("EvaluationEvaluator")
+  evaluations   Evaluation[]     @relation("EvaluationIntern")
+  evaluationsBy Evaluation[]     @relation("EvaluationEvaluator")
+  notifications Notification[]
+  surveys       SurveyResponse[]
 
   @@index([teamId])
 }
@@ -103,9 +105,11 @@ model Registration {
   reviewedAt     DateTime?
   createdAt      DateTime           @default(now())
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  team        Team         @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team        Team            @relation(fields: [teamId], references: [id], onDelete: Restrict)
   evaluations Evaluation[]
+  survey      SurveyResponse?
+  certificate Certificate?
 
   @@index([userId])
   @@index([status])
@@ -139,15 +143,21 @@ model Evaluation {
 }
 
 model OfficeSetting {
-  id           Int      @id @default(1)
-  name         String   @default("Kantor Pusat")
-  latitude     Float    @default(-6.2088)
-  longitude    Float    @default(106.8456)
-  radiusMeters Int      @default(150)
-  workStart    String   @default("08:00") // jam masuk (WIB)
-  lateAfter    String   @default("08:15") // lewat jam ini dianggap terlambat
-  workEnd      String   @default("16:00")
-  updatedAt    DateTime @updatedAt
+  id           Int    @id @default(1)
+  name         String @default("Kantor Pusat")
+  latitude     Float  @default(-6.2088)
+  longitude    Float  @default(106.8456)
+  radiusMeters Int    @default(150)
+  workStart    String @default("08:00") // jam masuk (WIB)
+  lateAfter    String @default("08:15") // lewat jam ini dianggap terlambat
+  workEnd      String @default("16:00")
+
+  // Sertifikat
+  orgName     String   @default("Portal Magang")
+  certCity    String   @default("Jakarta")
+  signerName  String   @default("")
+  signerTitle String   @default("Koordinator Program Magang")
+  updatedAt   DateTime @updatedAt
 }
 
 model Attendance {
@@ -211,4 +221,61 @@ model AuthAttempt {
   @@index([kind, key, createdAt])
   @@index([kind, ip, createdAt])
   @@index([createdAt])
+}
+
+enum NotificationType {
+  REGISTRATION_SUBMITTED
+  REGISTRATION_APPROVED
+  REGISTRATION_REJECTED
+  ABSENCE_REPORTED
+  EVALUATION_PUBLISHED
+  SURVEY_REMINDER
+  CERTIFICATE_ISSUED
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  href      String?
+  refId     String? // id objek terkait, untuk mencegah pengingat ganda
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([userId, type, refId])
+}
+
+// Survei akhir magang, syarat terbitnya sertifikat. Nilai 1–5.
+model SurveyResponse {
+  id             String   @id @default(cuid())
+  registrationId String   @unique
+  userId         String
+  overall        Int // kepuasan keseluruhan
+  relevance      Int // kesesuaian tugas dengan minat/jurusan
+  mentoring      Int // bimbingan admin tim/mentor
+  environment    Int // lingkungan & fasilitas kerja
+  recommend      Int // kesediaan merekomendasikan
+  highlights     String // hal paling bermanfaat
+  suggestions    String? // saran perbaikan
+  createdAt      DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Certificate {
+  id             String   @id @default(cuid())
+  registrationId String   @unique
+  number         String   @unique // mis. 007/MAGANG/XI/2026
+  code           String   @unique // kode verifikasi publik
+  issuedAt       DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
 }

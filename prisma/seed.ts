@@ -152,7 +152,50 @@ async function main() {
       });
     }
   }
-  console.log("Data demo dibuat. Password peserta & admin tim (admin.web/mobile/uiux@demo.local): Demo#12345");
+  // Peserta yang periode magangnya sudah selesai (untuk mencoba survei & sertifikat).
+  const dimas = await db.user.upsert({
+    where: { email: "dimas@demo.local" },
+    update: {},
+    create: {
+      email: "dimas@demo.local",
+      name: "Dimas Saputra",
+      passwordHash: hash,
+      profile: { create: { institution: "Universitas Gadjah Mada", major: "Teknik Informatika" } },
+    },
+  });
+  if (!(await db.registration.count({ where: { userId: dimas.id } }))) {
+    const reg = await db.registration.create({
+      data: {
+        userId: dimas.id,
+        teamId: teamIds["Web Development"],
+        type: "MAGANGHUB",
+        graduationYear: 2025,
+        startDate: dayStart(-90),
+        endDate: dayStart(-1),
+        motivation: "Mengasah kemampuan full-stack di lingkungan kerja nyata.",
+        status: "APPROVED",
+        reviewedAt: new Date(),
+      },
+    });
+    const thisMonth = dayStart(0);
+    for (const back of [1, 2]) {
+      await db.evaluation.create({
+        data: {
+          registrationId: reg.id,
+          internId: dimas.id,
+          month: new Date(Date.UTC(thisMonth.getUTCFullYear(), thisMonth.getUTCMonth() - back, 1)),
+          discipline: 90,
+          workQuality: 88,
+          communication: 86,
+          initiative: 92,
+          teamwork: 90,
+          notes: "Konsisten dan proaktif.",
+        },
+      });
+    }
+  }
+
+  console.log("Data demo dibuat. Password peserta (nadia/raka/salsa/dimas@demo.local) & admin tim (admin.web/mobile/uiux@demo.local): Demo#12345");
 }
 
 main()

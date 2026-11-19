@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: ["/$", "/daftar", "/login"],
-      disallow: ["/admin", "/dashboard", "/absensi", "/aktivitas", "/pendaftaran", "/evaluasi", "/profil", "/api", "/auth"],
+      disallow: ["/admin", "/dashboard", "/absensi", "/aktivitas", "/pendaftaran", "/evaluasi", "/profil", "/api", "/auth", "/cetak", "/sertifikat", "/notifikasi", "/verifikasi"],
     },
   };
 }

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { logout } from "@/actions/auth";
 import type { CurrentUser } from "@/lib/auth";
 import { BottomNav, SideNav } from "./nav";
+import { NotificationBell } from "./notification-bell";
 import { Avatar } from "./ui/ui";
 
 export function Logo() {
@@ -67,11 +68,15 @@ export function ShellFrame({
   account: ReactNode;
   children: ReactNode;
 }) {
+  const notificationsHref = variant === "admin" ? "/admin/notifikasi" : "/notifikasi";
   return (
     <div className="mx-auto flex min-h-dvh max-w-[1500px] gap-6 p-3 lg:p-6">
       <aside className="sticky top-6 hidden h-[calc(100dvh-3rem)] w-64 shrink-0 flex-col justify-between gap-4 overflow-y-auto rounded-card bg-surface p-5 shadow-card lg:flex">
         <div className="space-y-6">
-          <Logo />
+          <div className="flex items-center justify-between gap-2">
+            <Logo />
+            <NotificationBell allHref={notificationsHref} />
+          </div>
           {badge}
           <SideNav variant={variant} superAdmin={superAdmin} />
         </div>
@@ -91,9 +96,10 @@ export function ShellFrame({
       </aside>
 
       <div className="min-w-0 flex-1 pb-28 lg:pb-6">
-        <header className="mb-6 flex items-center justify-between rounded-card bg-surface p-3 pl-4 shadow-card lg:hidden">
+        <header className="sticky top-3 z-30 mb-6 flex items-center justify-between rounded-card bg-surface p-3 pl-4 shadow-card lg:hidden">
           <Logo />
           <div className="flex items-center gap-2">
+          <NotificationBell allHref={notificationsHref} />
           {variant === "admin" ? (
             <Link
               href="/admin/akun-saya"

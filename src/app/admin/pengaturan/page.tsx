@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ExternalLink } from "lucide-react";
-import { updateOffice } from "@/actions/admin";
+import { updateCertificateSettings, updateOffice } from "@/actions/admin";
 import { OfficeMapPicker } from "@/components/office-map-picker";
 import { ActionForm, Field } from "@/components/ui/form";
 import { Card, CardTitle, PageHeader } from "@/components/ui/ui";
@@ -44,7 +44,8 @@ export default async function SettingsPage() {
           </ActionForm>
         </Card>
 
-        <Card className="h-fit">
+        <div className="h-fit space-y-6 xl:sticky xl:top-6 self-start">
+        <Card>
           <CardTitle title="Titik saat ini" />
           <p className="font-semibold">{o.name}</p>
           <p className="mt-1 text-sm text-muted">
@@ -59,6 +60,23 @@ export default async function SettingsPage() {
             Buka di OpenStreetMap <ExternalLink className="size-3.5" aria-hidden />
           </a>
         </Card>
+
+        <Card>
+          <CardTitle title="Sertifikat" hint="Tercetak di sertifikat peserta yang selesai magang." />
+          <ActionForm action={updateCertificateSettings} submitLabel="Simpan" idPrefix="cert-">
+            <Field label="Nama instansi" name="orgName" defaultValue={o.orgName} maxLength={100} />
+            <Field label="Kota penerbitan" name="certCity" defaultValue={o.certCity} maxLength={60} />
+            <Field label="Jabatan penandatangan" name="signerTitle" defaultValue={o.signerTitle} maxLength={100} />
+            <Field
+              label="Nama penandatangan"
+              name="signerName"
+              defaultValue={o.signerName}
+              maxLength={100}
+              hint="Kosongkan jika ingin ditandatangani manual."
+            />
+          </ActionForm>
+        </Card>
+        </div>
       </div>
     </>
   );

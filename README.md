@@ -10,18 +10,23 @@ Next.js 16 (App Router, Cache Components) + Prisma 7 + PostgreSQL + Tailwind CSS
 - Absensi masuk/pulang berbasis lokasi (GPS browser, divalidasi radius di server)
 - Aktivitas: "bekerja" hanya bisa dicatat setelah absen masuk; izin/sakit tercatat otomatis sebagai "tidak bekerja"
 - Evaluasi bulanan: melihat nilai per aspek dan catatan dari admin tim
-- Profil dan ganti password
+- Sertifikat: setelah periode magang berakhir, isi survei akhir → sertifikat A4 terbit (cetak / simpan PDF) dengan nomor, QR, dan halaman verifikasi publik `/verifikasi/<kode>`
+- Notifikasi dalam aplikasi (ikon lonceng): pendaftaran disetujui/ditolak, evaluasi baru, pengingat survei, sertifikat terbit
+- Profil dan ganti password (kampus & jurusan dengan saran otomatis)
 
 **Admin utama** (`SUPER_ADMIN`)
 - Semua fitur admin tim untuk seluruh tim
 - Kelola tim: buat, edit, buka/tutup pendaftaran, hapus (jika belum ada pendaftaran). Tim yang dibuka tampil di halaman awal dan form pendaftaran
 - Kelola akun admin: buat admin utama/admin tim, pindahkan tim, aktif/nonaktifkan
+- Pengaturan sertifikat: nama instansi, kota, nama & jabatan penandatangan
 - Pengaturan absensi: atur titik kantor dan radius langsung di peta (klik/geser titik, slider radius, "Pakai lokasi saya"), serta jam kerja
 - Aktif/nonaktifkan akun peserta
 
 **Admin tim** (`TEAM_ADMIN`), hanya untuk timnya
 - Ringkasan harian, setujui/tolak pendaftaran, daftar dan detail peserta
 - Monitor absensi dan aktivitas per tanggal
+- Notifikasi: pendaftaran baru di timnya, laporan izin/sakit peserta
+- Hasil survei akhir: rata-rata per pertanyaan dan semua jawaban
 - Evaluasi bulanan: nilai 0–100 untuk kedisiplinan, kualitas kerja, komunikasi, inisiatif, kerja sama, plus catatan; rekap kehadiran bulan itu ditampilkan di form
 
 ## Menjalankan

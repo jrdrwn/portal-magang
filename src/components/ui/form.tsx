@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import type { ActionResult } from "@/lib/action-result";
+import { Combobox } from "./combobox";
 import { btn, inputClass } from "./ui";
 
 const FormContext = createContext<{
@@ -327,4 +328,82 @@ export function CheckboxField({
 /** Pesan error validasi untuk field tertentu di ActionForm terdekat. */
 export function useFieldError(name: string) {
   return useContext(FormContext).result?.fieldErrors?.[name]?.[0];
+}
+
+/** Combobox bergaya yang terhubung ke error/ID ActionForm. */
+export function ComboboxField({
+  label,
+  name,
+  hint,
+  className,
+  ...rest
+}: {
+  label: string;
+  name: string;
+  hint?: string;
+  className?: string;
+} & Omit<ComponentProps<typeof Combobox>, "id" | "name" | "invalid" | "describedBy">) {
+  const { result, idPrefix } = useContext(FormContext);
+  const errors = result?.fieldErrors?.[name];
+  const id = `${idPrefix}f-${name}`;
+  const describedBy = errors?.length ? `${id}-err` : hint ? `${id}-hint` : undefined;
+  return (
+    <div className={className}>
+      <label htmlFor={id} className="mb-1.5 block text-sm font-semibold">
+        {label}
+      </label>
+      <Combobox
+        id={id}
+        name={name}
+        invalid={Boolean(errors?.length)}
+        describedBy={describedBy}
+        {...rest}
+      />
+      {errors?.length ? (
+        <p id={`${id}-err`} className="mt-1.5 text-xs font-medium text-[#a0153f]">
+          {errors[0]}
+        </p>
+      ) : hint ? (
+        <p id={`${id}-hint`} className="mt-1.5 text-xs text-muted">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+const RATING_LABELS = ["Sangat kurang", "Kurang", "Cukup", "Baik", "Sangat baik"];
+
+/** Skala 1–5 berbentuk tombol pil (radio). */
+export function RatingField({ label, name }: { label: string; name: string }) {
+  const { result, idPrefix } = useContext(FormContext);
+  const errors = result?.fieldErrors?.[name];
+  const errId = `${idPrefix}f-${name}-err`;
+  return (
+    <fieldset aria-describedby={errors?.length ? errId : undefined}>
+      <legend className="mb-2 block text-sm font-semibold">{label}</legend>
+      <div className="grid grid-cols-5 gap-2">
+        {RATING_LABELS.map((text, i) => (
+          <label
+            key={text}
+            className={clsx(
+              "flex cursor-pointer flex-col items-center gap-1 rounded-2xl border bg-canvas/60 px-1 py-2.5 text-center transition",
+              "has-checked:border-brand-500 has-checked:bg-brand-600 has-checked:text-white",
+              "has-focus-visible:outline-2 has-focus-visible:outline-brand-500",
+              errors?.length ? "border-[#e0527a]" : "border-line hover:border-brand-200",
+            )}
+          >
+            <input type="radio" name={name} value={i + 1} className="sr-only" />
+            <span className="text-lg font-bold leading-none">{i + 1}</span>
+            <span className="text-[10px] leading-tight opacity-80 sm:text-[11px]">{text}</span>
+          </label>
+        ))}
+      </div>
+      {errors?.length ? (
+        <p id={errId} className="mt-1.5 text-xs font-medium text-[#a0153f]">
+          {errors[0]}
+        </p>
+      ) : null}
+    </fieldset>
+  );
 }

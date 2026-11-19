@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { createAdmin, setAdminActive, setAdminTeam } from "@/actions/admins";
 import { resetPassword } from "@/actions/password-reset";
-import { ActionButton, ActionForm, Field } from "@/components/ui/form";
+import { ActionButton, ActionForm, ComboboxField, Field } from "@/components/ui/form";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Avatar,
   Badge,
@@ -28,6 +29,7 @@ export default async function AdminAccountsPage() {
     }),
     db.team.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
+  const teamOptions = teams.map((t) => ({ value: t.id, label: t.name }));
 
   return (
     <>
@@ -37,7 +39,7 @@ export default async function AdminAccountsPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-        <Card className="h-fit">
+        <Card className="h-fit xl:sticky xl:top-6 self-start">
           <CardTitle title="Tambah admin" />
           {teams.length === 0 ? (
             <p className="mb-4 rounded-2xl bg-peach p-3 text-sm">
@@ -57,24 +59,23 @@ export default async function AdminAccountsPage() {
               autoComplete="new-password"
               hint="Minimal 8 karakter. Sampaikan ke admin yang bersangkutan."
             />
-            <Field label="Peran" name="role" as="select" defaultValue="TEAM_ADMIN">
-              <option value="TEAM_ADMIN">Admin tim</option>
-              <option value="SUPER_ADMIN">Admin utama</option>
-            </Field>
-            <Field
+            <ComboboxField
+              label="Peran"
+              name="role"
+              defaultValue="TEAM_ADMIN"
+              options={[
+                { value: "TEAM_ADMIN", label: "Admin tim", description: "Hanya melihat dan menilai peserta di timnya" },
+                { value: "SUPER_ADMIN", label: "Admin utama", description: "Mengelola semua tim, akun, dan pengaturan" },
+              ]}
+            />
+            <ComboboxField
               label="Tim"
               name="teamId"
-              as="select"
-              defaultValue=""
+              mode="search"
+              placeholder="Cari tim…"
               hint="Wajib untuk admin tim. Diabaikan untuk admin utama."
-            >
-              <option value="">Pilih tim</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </Field>
+              options={teamOptions}
+            />
           </ActionForm>
         </Card>
 
@@ -115,20 +116,15 @@ export default async function AdminAccountsPage() {
                           className="flex flex-wrap items-center gap-2 space-y-0! [&>div:last-child]:pt-0!"
                           submitClassName="px-4 py-2"
                         >
-                          <Field
-                            label="Tim"
+                          <Combobox
                             name="teamId"
-                            as="select"
+                            mode="search"
+                            ariaLabel={`Tim untuk ${a.name}`}
+                            placeholder="Cari tim…"
                             defaultValue={a.teamId ?? ""}
-                            className="min-w-44 [&_label]:sr-only [&_select]:py-2"
-                          >
-                            <option value="">Pilih tim</option>
-                            {teams.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.name}
-                              </option>
-                            ))}
-                          </Field>
+                            options={teamOptions}
+                            className="w-52"
+                          />
                         </ActionForm>
                       ) : null}
                       <ActionButton

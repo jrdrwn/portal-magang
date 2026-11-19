@@ -50,7 +50,7 @@ export default async function ActivityPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1.2fr]">
-        <div className="space-y-6">
+        <div className="h-fit space-y-6 xl:sticky xl:top-6 self-start">
           <Card
             className={
               working ? "bg-lime shadow-none" : notWorking ? "bg-sky shadow-none" : "bg-peach shadow-none"

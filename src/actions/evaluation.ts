@@ -4,9 +4,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAdmin, teamScope } from "@/lib/auth";
+import { notify } from "@/lib/notifications";
 import {
   ASPECTS,
+  averageScore,
   currentMonthKey,
+  formatMonth,
   isValidMonthKey,
   monthEnd,
   monthStart,
@@ -66,6 +69,10 @@ export async function saveEvaluation(
   if (!parsed.success) return validationFailure(parsed.error);
   const { notes, ...scores } = parsed.data;
 
+  const before = await db.evaluation.findUnique({
+    where: { registrationId_month: { registrationId, month: start } },
+    select: { id: true },
+  });
   await db.evaluation.upsert({
     where: { registrationId_month: { registrationId, month: start } },
     create: {
@@ -77,6 +84,14 @@ export async function saveEvaluation(
       notes: notes || null,
     },
     update: { ...scores, notes: notes || null, evaluatorId: admin.id },
+  });
+
+  await notify([reg.userId], {
+    type: "EVALUATION_PUBLISHED",
+    title: before ? `Evaluasi ${formatMonth(month)} diperbarui` : `Evaluasi ${formatMonth(month)} tersedia`,
+    body: `Nilai rata-rata Anda ${averageScore(scores)}. Lihat detail dan catatan dari admin tim.`,
+    href: "/evaluasi",
+    refId: registrationId,
   });
 
   revalidatePath("/admin", "layout");

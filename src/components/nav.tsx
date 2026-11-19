@@ -4,6 +4,8 @@ import clsx from "clsx";
 import {
   Award,
   CalendarRange,
+  GraduationCap,
+  MessageSquareHeart,
   ClipboardList,
   Shield,
   UsersRound,
@@ -17,6 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Suspense } from "react";
 
 type Item = {
   href: string;
@@ -33,6 +36,7 @@ const items = {
     { href: "/aktivitas", label: "Aktivitas", icon: ListChecks },
     { href: "/pendaftaran", label: "Pendaftaran", icon: CalendarRange },
     { href: "/evaluasi", label: "Evaluasi", icon: Award },
+    { href: "/sertifikat", label: "Sertifikat", icon: GraduationCap },
     { href: "/profil", label: "Profil", icon: UserRound },
   ],
   admin: [
@@ -42,21 +46,20 @@ const items = {
     { href: "/admin/absensi", label: "Absensi", icon: MapPin },
     { href: "/admin/aktivitas", label: "Aktivitas", icon: ListChecks },
     { href: "/admin/evaluasi", label: "Evaluasi", icon: Award },
+    { href: "/admin/survei", label: "Survei", icon: MessageSquareHeart },
     { href: "/admin/tim", label: "Tim", icon: UsersRound, superOnly: true },
     { href: "/admin/akun", label: "Akun admin", icon: Shield, superOnly: true },
     { href: "/admin/pengaturan", label: "Pengaturan", icon: Settings, superOnly: true },
   ],
 } satisfies Record<string, Item[]>;
 
-function useActive(item: Item) {
-  const pathname = usePathname();
+function isActive(item: Item, pathname: string) {
   return item.exact
     ? pathname === item.href
     : pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
-function SideLink({ item }: { item: Item }) {
-  const active = useActive(item);
+function SideLink({ item, active }: { item: Item; active: boolean }) {
   const Icon = item.icon;
   return (
     <Link
@@ -75,8 +78,7 @@ function SideLink({ item }: { item: Item }) {
   );
 }
 
-function TabLink({ item }: { item: Item }) {
-  const active = useActive(item);
+function TabLink({ item, active }: { item: Item; active: boolean }) {
   const Icon = item.icon;
   return (
     <Link
@@ -98,12 +100,34 @@ type NavProps = { variant: keyof typeof items; superAdmin?: boolean };
 const visible = ({ variant, superAdmin }: NavProps) =>
   (items[variant] as Item[]).filter((i) => !i.superOnly || superAdmin);
 
+function SideLinks({ list, pathname }: { list: Item[]; pathname: string | null }) {
+  return list.map((item) => (
+    <SideLink key={item.href} item={item} active={pathname != null && isActive(item, pathname)} />
+  ));
+}
+
+function TabLinks({ list, pathname }: { list: Item[]; pathname: string | null }) {
+  return list.map((item) => (
+    <TabLink key={item.href} item={item} active={pathname != null && isActive(item, pathname)} />
+  ));
+}
+
+function ActiveSideLinks({ list }: { list: Item[] }) {
+  return <SideLinks list={list} pathname={usePathname()} />;
+}
+
+function ActiveTabLinks({ list }: { list: Item[] }) {
+  return <TabLinks list={list} pathname={usePathname()} />;
+}
+
+// Di rute dinamis URL baru diketahui saat request; menu tetap tampil di shell tanpa penanda aktif.
 export function SideNav(props: NavProps) {
+  const list = visible(props);
   return (
     <nav aria-label="Menu utama" className="flex flex-col gap-1">
-      {visible(props).map((item) => (
-        <SideLink key={item.href} item={item} />
-      ))}
+      <Suspense fallback={<SideLinks list={list} pathname={null} />}>
+        <ActiveSideLinks list={list} />
+      </Suspense>
     </nav>
   );
 }
@@ -115,9 +139,9 @@ export function BottomNav(props: NavProps) {
       aria-label="Menu utama"
       className="fixed inset-x-3 bottom-3 z-30 flex gap-1 overflow-x-auto rounded-3xl bg-surface p-1.5 shadow-[0_10px_40px_rgb(21_20_31/0.15)] [scrollbar-width:none] lg:hidden"
     >
-      {list.map((item) => (
-        <TabLink key={item.href} item={item} />
-      ))}
+      <Suspense fallback={<TabLinks list={list} pathname={null} />}>
+        <ActiveTabLinks list={list} />
+      </Suspense>
     </nav>
   );
 }

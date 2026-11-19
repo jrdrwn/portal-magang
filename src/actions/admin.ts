@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAdmin, requireSuperAdmin, teamScope } from "@/lib/auth";
+import { notify } from "@/lib/notifications";
 import { isValidClock, parseClock } from "@/lib/dates";
 import {
   failure,
@@ -64,14 +65,27 @@ export async function reviewRegistration(
     }
   }
 
-  await db.registration.update({
+  const updated = await db.registration.update({
     where: { id },
     data: {
       status: decision,
       reviewNote: note || null,
       reviewedAt: decision === "PENDING" ? null : new Date(),
     },
+    include: { team: { select: { name: true } } },
   });
+  if (decision !== "PENDING") {
+    await notify([updated.userId], {
+      type: decision === "APPROVED" ? "REGISTRATION_APPROVED" : "REGISTRATION_REJECTED",
+      title: decision === "APPROVED" ? "Pendaftaran disetujui 🎉" : "Pendaftaran ditolak",
+      body:
+        decision === "APPROVED"
+          ? `Selamat! Anda diterima di tim ${updated.team.name}. Absen bisa dilakukan mulai tanggal mulai magang.`
+          : `Pendaftaran ke tim ${updated.team.name} ditolak.${note ? ` Catatan: ${note}` : ""}`,
+      href: decision === "APPROVED" ? "/dashboard" : "/pendaftaran",
+      refId: updated.id,
+    });
+  }
 
   revalidatePath("/admin", "layout");
   revalidatePath("/pendaftaran");
@@ -146,4 +160,29 @@ export async function updateOffice(formData: FormData): Promise<ActionResult> {
   revalidatePath("/admin", "layout");
   revalidatePath("/absensi");
   return success("Pengaturan lokasi & jam kerja disimpan.");
+}
+
+const certSchema = z.object({
+  orgName: z.string().min(2, "Nama instansi wajib diisi").max(100),
+  certCity: z.string().min(2, "Kota wajib diisi").max(60),
+  signerName: z.string().max(100),
+  signerTitle: z.string().min(2, "Jabatan wajib diisi").max(100),
+});
+
+export async function updateCertificateSettings(formData: FormData): Promise<ActionResult> {
+  await requireSuperAdmin();
+  const parsed = certSchema.safeParse({
+    orgName: str(formData, "orgName"),
+    certCity: str(formData, "certCity"),
+    signerName: str(formData, "signerName"),
+    signerTitle: str(formData, "signerTitle"),
+  });
+  if (!parsed.success) return validationFailure(parsed.error);
+  await db.officeSetting.upsert({
+    where: { id: 1 },
+    update: parsed.data,
+    create: { id: 1, ...parsed.data },
+  });
+  revalidatePath("/admin/pengaturan");
+  return success("Pengaturan sertifikat disimpan.");
 }

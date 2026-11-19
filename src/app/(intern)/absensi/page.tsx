@@ -3,13 +3,12 @@ import { Suspense } from "react";
 import { ExternalLink } from "lucide-react";
 import { submitAbsence } from "@/actions/attendance";
 import { AttendancePanel } from "@/components/attendance-panel";
-import { ActionForm, Field } from "@/components/ui/form";
+import { ActionForm, ComboboxField, Field } from "@/components/ui/form";
 import {
   Badge,
   Card,
   CardTitle,
   EmptyState,
-  PageHeader,
   Table,
   Td,
   Th,
@@ -25,15 +24,9 @@ export const metadata: Metadata = { title: "Absensi" };
 
 export default function AttendancePage() {
   return (
-    <>
-      <PageHeader
-        title="Absensi"
-        description="Absen masuk dan pulang berdasarkan lokasi Anda."
-      />
-      <Suspense fallback={<AttendanceSkeleton />}>
-        <AttendanceContent />
-      </Suspense>
-    </>
+    <Suspense fallback={<AttendanceSkeleton />}>
+      <AttendanceContent />
+    </Suspense>
   );
 }
 
@@ -103,16 +96,21 @@ async function AttendanceContent() {
         />
 
         {canReportAbsence ? (
-          <Card className="h-fit">
+          <Card className="h-fit xl:sticky xl:top-6 self-start">
             <CardTitle
               title="Tidak bisa bekerja hari ini?"
               hint="Laporkan izin atau sakit. Tercatat sebagai aktivitas tidak bekerja."
             />
             <ActionForm action={submitAbsence} submitLabel="Kirim laporan" resetOnSuccess>
-              <Field label="Jenis" name="kind" as="select" defaultValue="PERMIT">
-                <option value="PERMIT">Izin</option>
-                <option value="SICK">Sakit</option>
-              </Field>
+              <ComboboxField
+                label="Jenis"
+                name="kind"
+                defaultValue="PERMIT"
+                options={[
+                  { value: "PERMIT", label: "Izin", description: "Keperluan pribadi/keluarga, urusan kampus" },
+                  { value: "SICK", label: "Sakit", description: "Tidak dalam kondisi sehat untuk bekerja" },
+                ]}
+              />
               <Field
                 label="Alasan"
                 name="note"

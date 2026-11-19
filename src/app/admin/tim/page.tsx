@@ -42,7 +42,7 @@ export default async function TeamsPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-        <Card className="h-fit">
+        <Card className="h-fit xl:sticky xl:top-6 self-start">
           <CardTitle title="Buat tim baru" />
           <ActionForm action={createTeam} submitLabel="Buat tim" variant="brand" resetOnSuccess idPrefix="new-">
             <Field label="Nama tim" name="name" placeholder="Contoh: Data Analyst" maxLength={60} />

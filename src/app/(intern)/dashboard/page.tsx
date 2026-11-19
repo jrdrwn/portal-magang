@@ -36,7 +36,7 @@ export default async function DashboardPage() {
   const user = await requireIntern();
   const today = todayDate();
 
-  const [active, upcoming, pending, attendance, recent] = await Promise.all([
+  const [active, upcoming, pending, attendance, recent, needSurvey] = await Promise.all([
     getActiveRegistration(user.id, today),
     db.registration.findFirst({
       where: { userId: user.id, status: "APPROVED", startDate: { gt: today } },
@@ -52,6 +52,10 @@ export default async function DashboardPage() {
       where: { userId: user.id },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       take: 5,
+    }),
+    db.registration.findFirst({
+      where: { userId: user.id, status: "APPROVED", endDate: { lte: today }, survey: null },
+      include: { team: { select: { name: true } } },
     }),
   ]);
 
@@ -73,7 +77,19 @@ export default async function DashboardPage() {
         description={`${formatWeekday(today)}, ${formatDate(today, "long")}`}
       />
 
-      {!active ? (
+      {needSurvey ? (
+        <Card className="mb-6 bg-lime shadow-none">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold">Selamat, magang Anda di tim {needSurvey.team.name} sudah selesai 🎓</p>
+              <p className="text-sm text-ink/70">Isi survei akhir untuk menerbitkan sertifikat.</p>
+            </div>
+            <ButtonLink href={`/sertifikat/survei/${needSurvey.id}`}>Isi survei</ButtonLink>
+          </div>
+        </Card>
+      ) : null}
+
+      {!active && !needSurvey ? (
         <Card className="mb-6 bg-peach shadow-none">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -207,7 +223,7 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        <Card className="h-fit">
+        <Card className="h-fit xl:sticky xl:top-6 self-start">
           <CardTitle title="Periode magang" />
           {active ? (
             <>

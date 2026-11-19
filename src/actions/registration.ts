@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireIntern } from "@/lib/auth";
+import { notifyTeamAdmins } from "@/lib/notifications";
 import {
   dateKey,
   daysBetweenInclusive,
@@ -101,7 +102,7 @@ export async function createRegistration(
     );
   }
 
-  await db.registration.create({
+  const created = await db.registration.create({
     data: {
       userId: user.id,
       teamId: parsed.data.teamId,
@@ -111,6 +112,14 @@ export async function createRegistration(
       endDate: end,
       motivation: parsed.data.motivation,
     },
+  });
+
+  await notifyTeamAdmins(parsed.data.teamId, {
+    type: "REGISTRATION_SUBMITTED",
+    title: "Pendaftaran baru",
+    body: `${user.name} mendaftar ke tim ${team!.name} (${parsed.data.type === "MAGANGHUB" ? "MagangHub" : "Mandiri"}).`,
+    href: "/admin/pendaftaran",
+    refId: created.id,
   });
 
   revalidatePath("/pendaftaran");

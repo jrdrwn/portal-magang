@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Search } from "lucide-react";
 import {
   Avatar,
   Badge,
@@ -11,9 +10,10 @@ import {
   Td,
   Th,
   btn,
-  inputClass,
 } from "@/components/ui/ui";
 import { requireAdmin, teamScope } from "@/lib/auth";
+import { internInTeam } from "@/lib/queries";
+import { Combobox } from "@/components/ui/combobox";
 import { db } from "@/lib/db";
 import { formatDate, todayDate } from "@/lib/dates";
 import { internshipTypeInfo, type Tone } from "@/lib/labels";
@@ -71,6 +71,23 @@ export default async function InternsPage({ searchParams }: PageProps<"/admin/pe
     take: 200,
   });
 
+  const pool = await db.user.findMany({
+    where: { role: "INTERN", ...(teamScope(admin) ? internInTeam(teamScope(admin)) : {}) },
+    select: { name: true, email: true, profile: { select: { institution: true } } },
+    orderBy: { name: "asc" },
+    take: 300,
+  });
+  const suggestions = [
+    ...new Map(
+      pool.flatMap((u) => [
+        [u.name, { value: u.name, label: u.name, description: u.email }],
+        ...(u.profile?.institution
+          ? [[u.profile.institution, { value: u.profile.institution, label: u.profile.institution, description: "Asal sekolah/kampus" }] as const]
+          : []),
+      ]),
+    ).values(),
+  ];
+
   function stateOf(u: (typeof users)[number]): { label: string; tone: Tone } {
     if (!u.isActive) return { label: "Nonaktif", tone: "danger" };
     const approved = u.registrations.filter((r) => r.status === "APPROVED");
@@ -88,44 +105,40 @@ export default async function InternsPage({ searchParams }: PageProps<"/admin/pe
       <PageHeader title="Peserta" description={`${users.length} peserta${q ? ` untuk "${q}"` : ""}`} />
 
       <Card>
-        <form role="search" className="mb-5 flex flex-wrap gap-2">
-          <div className="relative min-w-60 flex-1">
-            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
-            <label htmlFor="q" className="sr-only">
-              Cari peserta
-            </label>
-            <input
-              id="q"
-              name="q"
-              defaultValue={q}
-              placeholder="Cari nama, email, atau asal sekolah/kampus"
-              className={clsx(inputClass, "pl-11")}
-            />
-          </div>
+        <form role="search" className="mb-5 flex flex-wrap items-start gap-2">
+          <Combobox
+            name="q"
+            mode="free"
+            ariaLabel="Cari peserta"
+            defaultValue={q}
+            maxLength={80}
+            placeholder="Cari nama, email, atau asal sekolah/kampus"
+            options={suggestions}
+            className="min-w-60 flex-1"
+          />
           {teams.length > 0 ? (
-            <>
-              <label htmlFor="team" className="sr-only">
-                Tim
-              </label>
-              <select id="team" name="team" defaultValue={scope ?? ""} className={clsx(inputClass, "w-auto")}>
-                <option value="">Semua tim</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </>
+            <Combobox
+              name="team"
+              mode="search"
+              ariaLabel="Filter tim"
+              placeholder="Semua tim"
+              defaultValue={scope ?? ""}
+              options={[{ value: "", label: "Semua tim" }, ...teams.map((t) => ({ value: t.id, label: t.name }))]}
+              className="w-52"
+            />
           ) : null}
-          <label htmlFor="type" className="sr-only">
-            Jenis magang
-          </label>
-          <select id="type" name="type" defaultValue={type} className={clsx(inputClass, "w-auto")}>
-            <option value="">Semua jenis</option>
-            <option value="MANDIRI">Mandiri</option>
-            <option value="MAGANGHUB">MagangHub</option>
-          </select>
-          <button type="submit" className={clsx(btn.base, btn.primary)}>
+          <Combobox
+            name="type"
+            ariaLabel="Filter jenis magang"
+            defaultValue={type}
+            options={[
+              { value: "", label: "Semua jenis" },
+              { value: "MANDIRI", label: "Mandiri" },
+              { value: "MAGANGHUB", label: "MagangHub" },
+            ]}
+            className="w-44"
+          />
+          <button type="submit" className={clsx(btn.base, btn.primary, "py-3")}>
             Cari
           </button>
         </form>

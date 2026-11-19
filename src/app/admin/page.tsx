@@ -183,7 +183,7 @@ export default async function AdminHome() {
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="h-fit space-y-6 xl:sticky xl:top-6 self-start">
           <Card>
             <CardTitle
               title="Pendaftaran menunggu"
