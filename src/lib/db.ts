@@ -12,6 +12,16 @@ function createClient() {
   return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 }
 
-export const db = globalForPrisma.prisma ?? createClient();
+// Di dev, instance disimpan di globalThis agar hot reload tidak membuat koneksi baru.
+// Setelah `prisma generate`, kelas PrismaClient berganti; instance lama (tanpa model baru)
+// tidak lagi `instanceof` kelas ini, jadi dibuang dan dibuat ulang.
+function getClient() {
+  const cached = globalForPrisma.prisma;
+  if (cached instanceof PrismaClient) return cached;
+  if (cached) void (cached as { $disconnect?: () => Promise<void> }).$disconnect?.();
+  return createClient();
+}
+
+export const db = getClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
