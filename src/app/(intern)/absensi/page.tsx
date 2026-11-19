@@ -13,7 +13,7 @@ import {
   Td,
   Th,
 } from "@/components/ui/ui";
-import { requireUser } from "@/lib/auth";
+import { requireIntern } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatDate, formatTime, todayDate } from "@/lib/dates";
 import { formatDistance, mapsUrl } from "@/lib/geo";
@@ -23,7 +23,7 @@ import { getActiveRegistration, getOfficeSetting } from "@/lib/queries";
 export const metadata: Metadata = { title: "Absensi" };
 
 export default async function AttendancePage() {
-  const user = await requireUser("INTERN");
+  const user = await requireIntern();
   const today = todayDate();
 
   const [office, active, attendance, history] = await Promise.all([

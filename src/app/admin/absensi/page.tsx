@@ -15,7 +15,7 @@ import {
   btn,
   inputClass,
 } from "@/components/ui/ui";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin, teamScope } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   addDays,
@@ -30,12 +30,13 @@ import {
 } from "@/lib/dates";
 import { formatDistance, mapsUrl } from "@/lib/geo";
 import { attendanceLabel, type Tone } from "@/lib/labels";
-import { getActiveInterns } from "@/lib/queries";
+import { getActiveInterns, internInTeam } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Monitor absensi" };
 
 export default async function AdminAttendance({ searchParams }: PageProps<"/admin/absensi">) {
-  await requireUser("ADMIN");
+  const admin = await requireAdmin();
+  const scope = teamScope(admin);
   const sp = await searchParams;
   const raw = Array.isArray(sp.date) ? sp.date[0] : sp.date;
   const today = todayDate();
@@ -44,9 +45,9 @@ export default async function AdminAttendance({ searchParams }: PageProps<"/admi
   const isToday = dateToKey(date) === dateToKey(today);
 
   const [interns, records] = await Promise.all([
-    getActiveInterns(date),
+    getActiveInterns(date, scope),
     db.attendance.findMany({
-      where: { date },
+      where: { date, ...(scope ? { user: internInTeam(scope) } : {}) },
       include: { user: { select: { id: true, name: true, email: true } } },
       orderBy: [{ checkInAt: "asc" }, { createdAt: "asc" }],
     }),

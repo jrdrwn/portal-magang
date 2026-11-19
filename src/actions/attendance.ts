@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requireIntern } from "@/lib/auth";
 import { minutesOfDay, parseClock, todayDate } from "@/lib/dates";
 import { distanceMeters, formatDistance } from "@/lib/geo";
 import { getActiveRegistration, getOfficeSetting } from "@/lib/queries";
@@ -54,7 +54,7 @@ export async function checkIn(input: {
   lat: number;
   lng: number;
 }): Promise<ActionResult> {
-  const user = await requireUser("INTERN");
+  const user = await requireIntern();
   const today = todayDate();
 
   const registration = await getActiveRegistration(user.id, today);
@@ -102,7 +102,7 @@ export async function checkOut(input: {
   lat: number;
   lng: number;
 }): Promise<ActionResult> {
-  const user = await requireUser("INTERN");
+  const user = await requireIntern();
   const today = todayDate();
 
   const attendance = await db.attendance.findUnique({
@@ -141,7 +141,7 @@ const absenceSchema = z.object({
 
 /** Tidak bekerja hari ini (izin / sakit). Otomatis tercatat sebagai aktivitas "tidak bekerja". */
 export async function submitAbsence(formData: FormData): Promise<ActionResult> {
-  const user = await requireUser("INTERN");
+  const user = await requireIntern();
   const today = todayDate();
 
   const parsed = absenceSchema.safeParse({

@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { changePassword, updateProfile } from "@/actions/profile";
 import { ActionForm, Field } from "@/components/ui/form";
 import { Avatar, Card, CardTitle, PageHeader } from "@/components/ui/ui";
-import { requireUser } from "@/lib/auth";
+import { requireIntern } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dateToKey, formatDate } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Profil" };
 
 export default async function ProfilePage() {
-  const current = await requireUser("INTERN");
+  const current = await requireIntern();
   const user = await db.user.findUniqueOrThrow({
     where: { id: current.id },
     include: { profile: true },

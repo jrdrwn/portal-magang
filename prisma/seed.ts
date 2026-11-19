@@ -26,22 +26,51 @@ async function main() {
     create: {
       email,
       name: "Admin Portal",
-      role: "ADMIN",
+      role: "SUPER_ADMIN",
       passwordHash: await bcrypt.hash(password, 10),
     },
   });
   await db.officeSetting.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } });
-  console.log(`Admin siap: ${email}`);
+  console.log(`Admin utama siap: ${email}`);
 
   if (process.env.SEED_DEMO !== "1") return;
 
-  // Data demo (hanya jika SEED_DEMO=1): peserta, pendaftaran, absensi, aktivitas.
-  const demo = [
-    { name: "Nadia Putri", email: "nadia@demo.local", inst: "Universitas Indonesia", major: "Ilmu Komputer", div: "Web Development" },
-    { name: "Raka Pratama", email: "raka@demo.local", inst: "ITB", major: "Informatika", div: "Mobile Development" },
-    { name: "Salsa Amelia", email: "salsa@demo.local", inst: "SMK Telkom Jakarta", major: "RPL", div: "UI/UX Design" },
-  ];
+  // Data demo (hanya jika SEED_DEMO=1): tim, admin tim, peserta, absensi, aktivitas, evaluasi.
   const hash = await bcrypt.hash("Demo#12345", 10);
+  const teamDefs = [
+    { name: "Web Development", description: "Membangun aplikasi web dengan Next.js dan TypeScript.", admin: "web" },
+    { name: "Mobile Development", description: "Aplikasi Android/iOS dengan Flutter.", admin: "mobile" },
+    { name: "UI/UX Design", description: "Riset pengguna, wireframe, dan desain antarmuka di Figma.", admin: "uiux" },
+    { name: "Data Analyst", description: "Analisis data dan dashboard bisnis.", admin: null, isOpen: false },
+  ];
+  const teamIds: Record<string, string> = {};
+  for (const t of teamDefs) {
+    const team = await db.team.upsert({
+      where: { name: t.name },
+      update: {},
+      create: { name: t.name, description: t.description, isOpen: t.isOpen ?? true },
+    });
+    teamIds[t.name] = team.id;
+    if (t.admin) {
+      await db.user.upsert({
+        where: { email: `admin.${t.admin}@demo.local` },
+        update: {},
+        create: {
+          email: `admin.${t.admin}@demo.local`,
+          name: `Admin ${t.name}`,
+          role: "TEAM_ADMIN",
+          teamId: team.id,
+          passwordHash: hash,
+        },
+      });
+    }
+  }
+
+  const demo = [
+    { name: "Nadia Putri", email: "nadia@demo.local", inst: "Universitas Indonesia", major: "Ilmu Komputer", div: "Web Development", type: "MANDIRI" as const },
+    { name: "Raka Pratama", email: "raka@demo.local", inst: "ITB", major: "Informatika", div: "Mobile Development", type: "MAGANGHUB" as const },
+    { name: "Salsa Amelia", email: "salsa@demo.local", inst: "SMK Telkom Jakarta", major: "RPL", div: "UI/UX Design", type: "MANDIRI" as const },
+  ];
 
   for (const [i, d] of demo.entries()) {
     const user = await db.user.upsert({
@@ -56,11 +85,13 @@ async function main() {
     });
     if (await db.registration.count({ where: { userId: user.id } })) continue;
 
-    await db.registration.create({
+    const reg = await db.registration.create({
       data: {
         userId: user.id,
-        division: d.div,
-        startDate: dayStart(-14),
+        teamId: teamIds[d.div],
+        type: d.type,
+        graduationYear: d.type === "MAGANGHUB" ? 2025 : null,
+        startDate: dayStart(-45),
         endDate: dayStart(60),
         motivation: "Ingin belajar langsung dari praktik industri.",
         status: "APPROVED",
@@ -69,6 +100,23 @@ async function main() {
     });
 
     const office = await db.officeSetting.findUniqueOrThrow({ where: { id: 1 } });
+    // Evaluasi bulan lalu.
+    const thisMonth = dayStart(0);
+    const lastMonth = new Date(Date.UTC(thisMonth.getUTCFullYear(), thisMonth.getUTCMonth() - 1, 1));
+    await db.evaluation.create({
+      data: {
+        registrationId: reg.id,
+        internId: user.id,
+        month: lastMonth,
+        discipline: 80 + i * 4,
+        workQuality: 78 + i * 3,
+        communication: 85 - i * 5,
+        initiative: 75 + i * 5,
+        teamwork: 88 - i * 2,
+        notes: "Progres baik. Bulan depan fokus pada dokumentasi dan pengujian.",
+      },
+    });
+
     for (let back = 14; back >= 0; back--) {
       const date = dayStart(-back);
       const dow = date.getUTCDay();
@@ -104,7 +152,7 @@ async function main() {
       });
     }
   }
-  console.log("Data demo dibuat (password peserta: Demo#12345)");
+  console.log("Data demo dibuat. Password peserta & admin tim (admin.web/mobile/uiux@demo.local): Demo#12345");
 }
 
 main()

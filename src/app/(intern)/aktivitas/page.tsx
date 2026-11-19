@@ -10,7 +10,7 @@ import {
   EmptyState,
   PageHeader,
 } from "@/components/ui/ui";
-import { requireUser } from "@/lib/auth";
+import { requireIntern } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dateToKey, formatDate, formatTime, formatWeekday, todayDate } from "@/lib/dates";
 import { activityLabel, attendanceLabel } from "@/lib/labels";
@@ -19,7 +19,7 @@ import { getActiveRegistration, getTodayAttendance } from "@/lib/queries";
 export const metadata: Metadata = { title: "Aktivitas" };
 
 export default async function ActivityPage() {
-  const user = await requireUser("INTERN");
+  const user = await requireIntern();
   const today = todayDate();
 
   const [active, attendance, activities] = await Promise.all([

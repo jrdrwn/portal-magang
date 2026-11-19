@@ -17,7 +17,8 @@ import { btn, inputClass } from "./ui";
 const FormContext = createContext<{
   result: ActionResult | null;
   pending: boolean;
-}>({ result: null, pending: false });
+  idPrefix: string;
+}>({ result: null, pending: false, idPrefix: "" });
 
 export function FormMessage({ result }: { result: ActionResult | null }) {
   if (!result) return null;
@@ -59,7 +60,9 @@ export function ActionForm({
   className,
   submitClassName,
   extra,
+  idPrefix = "",
 }: {
+  idPrefix?: string;
   action: FormAction;
   children: ReactNode;
   submitLabel: string;
@@ -74,7 +77,7 @@ export function ActionForm({
   const ref = useRef<HTMLFormElement>(null);
 
   return (
-    <FormContext value={{ result, pending }}>
+    <FormContext value={{ result, pending, idPrefix }}>
       <form
         ref={ref}
         noValidate
@@ -132,10 +135,10 @@ type SelectFieldProps = FieldProps &
 export function Field(
   props: InputFieldProps | TextareaFieldProps | SelectFieldProps,
 ) {
-  const { result } = useContext(FormContext);
+  const { result, idPrefix } = useContext(FormContext);
   const { label, name, hint, className, as = "input", ...rest } = props;
   const errors = result?.fieldErrors?.[name];
-  const id = `f-${name}`;
+  const id = `${idPrefix}f-${name}`;
   const describedBy = errors?.length ? `${id}-err` : hint ? `${id}-hint` : undefined;
   const common = {
     id,
@@ -217,4 +220,100 @@ export function ActionButton({
       ) : null}
     </span>
   );
+}
+
+/** Pilihan berbentuk kartu (radio). */
+export function ChoiceGroup({
+  label,
+  name,
+  options,
+  defaultValue,
+  onChange,
+  columns = 2,
+}: {
+  label: string;
+  name: string;
+  options: { value: string; label: string; description?: string | null }[];
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+  columns?: 1 | 2 | 3;
+}) {
+  const { result, idPrefix } = useContext(FormContext);
+  const errors = result?.fieldErrors?.[name];
+  const errId = `${idPrefix}f-${name}-err`;
+  const cols = { 1: "", 2: "sm:grid-cols-2", 3: "sm:grid-cols-3" }[columns];
+
+  return (
+    <fieldset aria-describedby={errors?.length ? errId : undefined}>
+      <legend className="mb-1.5 block text-sm font-semibold">{label}</legend>
+      <div className={clsx("grid gap-2", cols)}>
+        {options.map((o) => (
+          <label
+            key={o.value}
+            className={clsx(
+              "flex cursor-pointer items-start gap-3 rounded-2xl border bg-canvas/60 p-3.5 transition",
+              "has-checked:border-brand-500 has-checked:bg-brand-50 has-checked:ring-4 has-checked:ring-brand-100",
+              "has-focus-visible:outline-2 has-focus-visible:outline-brand-500",
+              errors?.length ? "border-[#e0527a]" : "border-line hover:border-brand-200",
+            )}
+          >
+            <input
+              type="radio"
+              name={name}
+              value={o.value}
+              defaultChecked={defaultValue === o.value}
+              onChange={(e) => e.target.checked && onChange?.(o.value)}
+              className="mt-0.5 size-4 accent-brand-600"
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">{o.label}</span>
+              {o.description ? (
+                <span className="mt-0.5 block text-xs text-muted">{o.description}</span>
+              ) : null}
+            </span>
+          </label>
+        ))}
+      </div>
+      {errors?.length ? (
+        <p id={errId} className="mt-1.5 text-xs font-medium text-[#a0153f]">
+          {errors[0]}
+        </p>
+      ) : null}
+    </fieldset>
+  );
+}
+
+export function CheckboxField({
+  label,
+  name,
+  defaultChecked,
+  hint,
+}: {
+  label: string;
+  name: string;
+  defaultChecked?: boolean;
+  hint?: string;
+}) {
+  const { idPrefix } = useContext(FormContext);
+  const id = `${idPrefix}f-${name}`;
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-3">
+      <input
+        id={id}
+        type="checkbox"
+        name={name}
+        defaultChecked={defaultChecked}
+        className="mt-0.5 size-5 rounded accent-brand-600"
+      />
+      <span>
+        <span className="block text-sm font-semibold">{label}</span>
+        {hint ? <span className="block text-xs text-muted">{hint}</span> : null}
+      </span>
+    </label>
+  );
+}
+
+/** Pesan error validasi untuk field tertentu di ActionForm terdekat. */
+export function useFieldError(name: string) {
+  return useContext(FormContext).result?.fieldErrors?.[name]?.[0];
 }

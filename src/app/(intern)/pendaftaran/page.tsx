@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cancelRegistration, createRegistration } from "@/actions/registration";
-import { ActionButton, ActionForm, Field } from "@/components/ui/form";
+import { ActionButton, ActionForm } from "@/components/ui/form";
+import { RegistrationFields } from "@/components/registration-fields";
 import {
   Badge,
   Card,
@@ -8,51 +9,47 @@ import {
   EmptyState,
   PageHeader,
 } from "@/components/ui/ui";
-import { requireUser } from "@/lib/auth";
+import { requireIntern } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { dateKey, daysBetweenInclusive, formatDate } from "@/lib/dates";
-import { registrationLabel } from "@/lib/labels";
+import { internshipTypeInfo, registrationLabel } from "@/lib/labels";
+import { getOpenTeams } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Pendaftaran" };
 
 export default async function RegistrationPage() {
-  const user = await requireUser("INTERN");
+  const user = await requireIntern();
   const today = dateKey();
 
-  const registrations = await db.registration.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-  });
+  const [registrations, teams] = await Promise.all([
+    db.registration.findMany({
+      where: { userId: user.id },
+      include: { team: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    getOpenTeams(),
+  ]);
 
   return (
     <>
       <PageHeader
         title="Pendaftaran magang"
-        description="Tentukan divisi dan periode magang. Admin akan meninjau pengajuan Anda."
+        description="Pilih tim, jenis magang, dan periode magang. Admin akan meninjau pengajuan Anda."
       />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1.1fr]">
         <Card className="h-fit">
           <CardTitle title="Ajukan periode baru" />
+          {teams.length === 0 ? (
+            <EmptyState
+              title="Belum ada tim yang membuka magang"
+              description="Silakan cek kembali nanti."
+            />
+          ) : (
           <ActionForm action={createRegistration} submitLabel="Kirim pendaftaran" variant="brand" resetOnSuccess>
-            <Field
-              label="Divisi / bidang"
-              name="division"
-              placeholder="Contoh: Web Development"
-              maxLength={60}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Mulai" name="startDate" type="date" min={today} />
-              <Field label="Selesai" name="endDate" type="date" min={today} />
-            </div>
-            <Field
-              label="Motivasi"
-              name="motivation"
-              as="textarea"
-              placeholder="Ceritakan singkat alasan dan tujuan magang Anda"
-              maxLength={1000}
-            />
+            <RegistrationFields teams={teams} today={today} />
           </ActionForm>
+          )}
         </Card>
 
         <Card>
@@ -68,7 +65,13 @@ export default async function RegistrationPage() {
                 <li key={r.id} className="rounded-3xl bg-canvas/70 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-semibold">{r.division}</p>
+                      <p className="font-semibold">{r.team.name}</p>
+                      <div className="mt-1">
+                        <Badge tone={internshipTypeInfo[r.type].tone}>
+                          {internshipTypeInfo[r.type].label}
+                          {r.graduationYear ? ` · lulus ${r.graduationYear}` : ""}
+                        </Badge>
+                      </div>
                       <p className="mt-0.5 text-sm text-muted">
                         {formatDate(r.startDate)} – {formatDate(r.endDate)} ·{" "}
                         {daysBetweenInclusive(r.startDate, r.endDate)} hari

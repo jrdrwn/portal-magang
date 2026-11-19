@@ -4,7 +4,18 @@ import { SignJWT, jwtVerify } from "jose";
 export const SESSION_COOKIE = "portal_session";
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
-export type SessionPayload = { userId: string; role: "ADMIN" | "INTERN" };
+export type SessionRole = "SUPER_ADMIN" | "TEAM_ADMIN" | "INTERN";
+export type SessionPayload = { userId: string; role: SessionRole };
+
+export const isAdminRole = (role: SessionRole) =>
+  role === "SUPER_ADMIN" || role === "TEAM_ADMIN";
+
+function toRole(value: unknown): SessionRole {
+  // "ADMIN" = token lama sebelum ada admin tim.
+  if (value === "SUPER_ADMIN" || value === "ADMIN") return "SUPER_ADMIN";
+  if (value === "TEAM_ADMIN") return "TEAM_ADMIN";
+  return "INTERN";
+}
 
 function secretKey() {
   const secret = process.env.SESSION_SECRET;
@@ -32,8 +43,7 @@ export async function verifyToken(
       algorithms: ["HS256"],
     });
     if (!payload.sub) return null;
-    const role = payload.role === "ADMIN" ? "ADMIN" : "INTERN";
-    return { userId: payload.sub, role };
+    return { userId: payload.sub, role: toRole(payload.role) };
   } catch {
     return null;
   }

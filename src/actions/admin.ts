@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin, requireSuperAdmin, teamScope } from "@/lib/auth";
 import { isValidClock, parseClock } from "@/lib/dates";
 import {
   failure,
@@ -22,7 +22,8 @@ const reviewSchema = z.object({
 export async function reviewRegistration(
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireUser("ADMIN");
+  const admin = await requireAdmin();
+  const scope = teamScope(admin);
 
   const parsed = reviewSchema.safeParse({
     id: str(formData, "id"),
@@ -33,7 +34,10 @@ export async function reviewRegistration(
   const { id, decision, note } = parsed.data;
 
   const reg = await db.registration.findUnique({ where: { id } });
-  if (!reg) return failure("Pendaftaran tidak ditemukan.");
+  // Admin tim hanya boleh meninjau pendaftaran timnya.
+  if (!reg || (scope && reg.teamId !== scope)) {
+    return failure("Pendaftaran tidak ditemukan.");
+  }
 
   if (decision === "REJECTED" && !note) {
     return {
@@ -85,7 +89,7 @@ export async function setUserActive(
   userId: string,
   isActive: boolean,
 ): Promise<ActionResult> {
-  const admin = await requireUser("ADMIN");
+  const admin = await requireSuperAdmin();
   if (admin.id === userId) {
     return failure("Anda tidak bisa menonaktifkan akun sendiri.");
   }
@@ -109,7 +113,7 @@ const officeSchema = z
       z.number().min(-180, "Longitude -180..180").max(180, "Longitude -180..180"),
     ),
     radiusMeters: num("Radius").pipe(
-      z.number().int("Harus bilangan bulat").min(20, "Radius minimal 20 m").max(5000, "Radius maksimal 5000 m"),
+      z.number().int("Harus bilangan bulat").min(20, "Radius minimal 20 m").max(2000, "Radius maksimal 2000 m"),
     ),
     workStart: z.string().refine(isValidClock, "Format jam HH:mm"),
     lateAfter: z.string().refine(isValidClock, "Format jam HH:mm"),
@@ -121,7 +125,7 @@ const officeSchema = z
   });
 
 export async function updateOffice(formData: FormData): Promise<ActionResult> {
-  await requireUser("ADMIN");
+  await requireSuperAdmin();
 
   const parsed = officeSchema.safeParse({
     name: str(formData, "name"),

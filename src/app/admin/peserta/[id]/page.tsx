@@ -15,23 +15,42 @@ import {
   Td,
   Th,
 } from "@/components/ui/ui";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin, teamScope } from "@/lib/auth";
+import { internInTeam } from "@/lib/queries";
+import { averageScore, grade } from "@/lib/evaluation";
 import { db } from "@/lib/db";
 import { daysBetweenInclusive, formatDate, formatTime } from "@/lib/dates";
 import { formatDistance, mapsUrl } from "@/lib/geo";
-import { activityLabel, attendanceLabel, registrationLabel } from "@/lib/labels";
+import {
+  activityLabel,
+  attendanceLabel,
+  internshipTypeInfo,
+  registrationLabel,
+} from "@/lib/labels";
 
 export const metadata: Metadata = { title: "Detail peserta" };
 
+const formatMonthDate = (d: Date) =>
+  new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", month: "long", year: "numeric" }).format(d);
+
 export default async function InternDetail({ params }: PageProps<"/admin/peserta/[id]">) {
-  await requireUser("ADMIN");
+  const admin = await requireAdmin();
+  const scope = teamScope(admin);
   const { id } = await params;
 
   const user = await db.user.findFirst({
-    where: { id, role: "INTERN" },
+    where: { id, role: "INTERN", ...internInTeam(scope) },
     include: {
       profile: true,
-      registrations: { orderBy: { startDate: "desc" } },
+      registrations: {
+        include: { team: { select: { name: true } } },
+        orderBy: { startDate: "desc" },
+      },
+      evaluations: {
+        where: scope ? { registration: { teamId: scope } } : {},
+        orderBy: { month: "desc" },
+        include: { evaluator: { select: { name: true } } },
+      },
     },
   });
   if (!user) notFound();
@@ -71,6 +90,7 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
               </div>
             </div>
           </div>
+          {admin.role === "SUPER_ADMIN" ? (
           <ActionButton
             action={setUserActive.bind(null, user.id, !user.isActive)}
             variant={user.isActive ? "danger" : "primary"}
@@ -82,6 +102,7 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
           >
             {user.isActive ? "Nonaktifkan akun" : "Aktifkan akun"}
           </ActionButton>
+          ) : null}
         </div>
       </Card>
 
@@ -124,7 +145,11 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
                   <li key={r.id} className="rounded-3xl bg-canvas/70 p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-semibold">{r.division}</p>
+                        <p className="font-semibold">{r.team.name}</p>
+                        <p className="text-xs font-semibold text-brand-700">
+                          {internshipTypeInfo[r.type].label}
+                          {r.graduationYear ? ` · lulus ${r.graduationYear}` : ""}
+                        </p>
                         <p className="text-xs text-muted">
                           {formatDate(r.startDate)} – {formatDate(r.endDate)} ·{" "}
                           {daysBetweenInclusive(r.startDate, r.endDate)} hari
@@ -142,6 +167,34 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
         </div>
 
         <div className="space-y-6">
+          <Card>
+            <CardTitle title="Evaluasi bulanan" />
+            {user.evaluations.length === 0 ? (
+              <EmptyState title="Belum ada evaluasi" />
+            ) : (
+              <ul className="space-y-2">
+                {user.evaluations.map((e) => {
+                  const avg = averageScore(e);
+                  const g = grade(avg);
+                  return (
+                    <li key={e.id} className="flex items-center justify-between gap-3 rounded-3xl bg-canvas/70 p-4">
+                      <div className="min-w-0">
+                        <p className="font-semibold capitalize">{formatMonthDate(e.month)}</p>
+                        <p className="text-xs text-muted">
+                          Dinilai {e.evaluator?.name ?? "-"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold">{avg}</span>
+                        <Badge tone={g.tone}>{g.letter} · {g.label}</Badge>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+
           <Card>
             <CardTitle title="Riwayat absensi" hint="60 catatan terakhir" />
             {attendances.length === 0 ? (

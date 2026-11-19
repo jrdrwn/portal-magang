@@ -1,9 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verifyToken } from "@/lib/session-token";
+import { SESSION_COOKIE, isAdminRole, verifyToken } from "@/lib/session-token";
 
 // Pengecekan awal (optimistic) berdasarkan cookie. Otorisasi sebenarnya
 // tetap dilakukan di server (requireUser) dekat dengan data.
-const INTERN_PATHS = ["/dashboard", "/absensi", "/aktivitas", "/pendaftaran", "/profil"];
+const INTERN_PATHS = [
+  "/dashboard",
+  "/absensi",
+  "/aktivitas",
+  "/pendaftaran",
+  "/evaluasi",
+  "/profil",
+];
 const AUTH_PATHS = ["/login", "/daftar"];
 
 const matches = (pathname: string, bases: string[]) =>
@@ -16,15 +23,16 @@ export async function proxy(request: NextRequest) {
     NextResponse.redirect(new URL(path, request.url));
 
   if (matches(pathname, AUTH_PATHS)) {
-    if (session) return redirectTo(session.role === "ADMIN" ? "/admin" : "/dashboard");
+    if (session) return redirectTo(isAdminRole(session.role) ? "/admin" : "/dashboard");
     return NextResponse.next();
   }
 
   const isAdminPath = matches(pathname, ["/admin"]);
   if (isAdminPath || matches(pathname, INTERN_PATHS)) {
     if (!session) return redirectTo("/login");
-    if (isAdminPath && session.role !== "ADMIN") return redirectTo("/dashboard");
-    if (!isAdminPath && session.role === "ADMIN") return redirectTo("/admin");
+    const admin = isAdminRole(session.role);
+    if (isAdminPath && !admin) return redirectTo("/dashboard");
+    if (!isAdminPath && admin) return redirectTo("/admin");
   }
 
   return NextResponse.next();
@@ -38,6 +46,7 @@ export const config = {
     "/absensi/:path*",
     "/aktivitas/:path*",
     "/pendaftaran/:path*",
+    "/evaluasi/:path*",
     "/profil/:path*",
     "/admin/:path*",
   ],

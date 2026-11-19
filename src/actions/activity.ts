@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requireIntern } from "@/lib/auth";
 import { todayDate } from "@/lib/dates";
 import {
   failure,
@@ -22,7 +22,7 @@ const activitySchema = z.object({
 export async function addWorkActivity(
   formData: FormData,
 ): Promise<ActionResult> {
-  const user = await requireUser("INTERN");
+  const user = await requireIntern();
   const today = todayDate();
 
   const parsed = activitySchema.safeParse({
@@ -60,7 +60,7 @@ export async function addWorkActivity(
 }
 
 export async function deleteWorkActivity(id: string): Promise<ActionResult> {
-  const user = await requireUser("INTERN");
+  const user = await requireIntern();
   // Hanya aktivitas kerja milik sendiri pada hari ini.
   const res = await db.activity.deleteMany({
     where: { id, userId: user.id, type: "WORK", date: todayDate() },

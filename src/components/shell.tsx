@@ -30,15 +30,22 @@ export function AppShell({
 }) {
   return (
     <div className="mx-auto flex min-h-dvh max-w-[1500px] gap-6 p-3 lg:p-6">
-      <aside className="sticky top-6 hidden h-[calc(100dvh-3rem)] w-64 shrink-0 flex-col justify-between rounded-card bg-surface p-5 shadow-card lg:flex">
-        <div className="space-y-8">
+      <aside className="sticky top-6 hidden h-[calc(100dvh-3rem)] w-64 shrink-0 flex-col justify-between gap-4 overflow-y-auto rounded-card bg-surface p-5 shadow-card lg:flex">
+        <div className="space-y-6">
           <Logo />
           {variant === "admin" ? (
-            <p className="rounded-full bg-lime px-3 py-1 text-center text-xs font-bold uppercase tracking-wider">
-              Mode Admin
-            </p>
+            <div className="rounded-3xl bg-lime px-3 py-2 text-center">
+              <p className="text-xs font-bold uppercase tracking-wider">
+                {user.role === "SUPER_ADMIN" ? "Admin utama" : "Admin tim"}
+              </p>
+              {user.role === "TEAM_ADMIN" ? (
+                <p className="truncate text-xs font-medium text-ink/70">
+                  {user.teamName ?? "Belum ada tim"}
+                </p>
+              ) : null}
+            </div>
           ) : null}
-          <SideNav variant={variant} />
+          <SideNav variant={variant} superAdmin={user.role === "SUPER_ADMIN"} />
         </div>
 
         <div className="space-y-3">
@@ -77,7 +84,7 @@ export function AppShell({
         <main id="konten">{children}</main>
       </div>
 
-      <BottomNav variant={variant} />
+      <BottomNav variant={variant} superAdmin={user.role === "SUPER_ADMIN"} />
     </div>
   );
 }

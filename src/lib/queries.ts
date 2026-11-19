@@ -11,6 +11,7 @@ export function getActiveRegistration(userId: string, on: Date = todayDate()) {
       startDate: { lte: on },
       endDate: { gte: on },
     },
+    include: { team: { select: { id: true, name: true } } },
     orderBy: { startDate: "desc" },
   });
 }
@@ -70,17 +71,25 @@ export function weekdayKeys(from: Date, to: Date) {
   return keys;
 }
 
+/** Filter Prisma: peserta dengan pendaftaran disetujui di tim `teamId` (null = semua). */
+export function internInTeam(teamId: string | null) {
+  return teamId
+    ? { registrations: { some: { teamId, status: "APPROVED" as const } } }
+    : {};
+}
+
 /** Peserta aktif (akun aktif + pendaftaran disetujui yang mencakup tanggal `on`). */
-export async function getActiveInterns(on: Date) {
+export async function getActiveInterns(on: Date, teamId: string | null = null) {
   const regs = await db.registration.findMany({
     where: {
       status: "APPROVED",
       startDate: { lte: on },
       endDate: { gte: on },
+      ...(teamId ? { teamId } : {}),
       user: { isActive: true, role: "INTERN" },
     },
     select: {
-      division: true,
+      team: { select: { name: true } },
       user: { select: { id: true, name: true, email: true } },
     },
     orderBy: { user: { name: "asc" } },
@@ -88,5 +97,14 @@ export async function getActiveInterns(on: Date) {
   const seen = new Set<string>();
   return regs
     .filter((r) => (seen.has(r.user.id) ? false : seen.add(r.user.id)))
-    .map((r) => ({ ...r.user, division: r.division }));
+    .map((r) => ({ ...r.user, team: r.team.name }));
+}
+
+/** Tim yang sedang membuka pendaftaran. */
+export function getOpenTeams() {
+  return db.team.findMany({
+    where: { isOpen: true },
+    select: { id: true, name: true, description: true },
+    orderBy: { name: "asc" },
+  });
 }

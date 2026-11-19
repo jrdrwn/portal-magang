@@ -10,6 +10,8 @@ export type CurrentUser = {
   name: string;
   email: string;
   role: Role;
+  teamId: string | null;
+  teamName: string | null;
 };
 
 /** Baca sesi lalu muat user dari DB (satu kali per request). */
@@ -18,29 +20,66 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!session) return null;
   const user = await db.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, name: true, email: true, role: true, isActive: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      isActive: true,
+      teamId: true,
+      team: { select: { name: true } },
+    },
   });
   if (!user || !user.isActive) return null;
-  return { id: user.id, name: user.name, email: user.email, role: user.role };
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    teamId: user.teamId,
+    teamName: user.team?.name ?? null,
+  };
 });
 
+export const isAdmin = (role: Role) =>
+  role === "SUPER_ADMIN" || role === "TEAM_ADMIN";
+
 export function homePathFor(role: Role) {
-  return role === "ADMIN" ? "/admin" : "/dashboard";
+  return isAdmin(role) ? "/admin" : "/dashboard";
 }
 
-/** Wajib login. Jika `role` diberikan, user dengan role lain dialihkan ke beranda miliknya. */
-export async function requireUser(role?: Role): Promise<CurrentUser> {
+export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (role && user.role !== role) redirect(homePathFor(user.role));
   return user;
 }
 
-export function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("");
+export async function requireIntern(): Promise<CurrentUser> {
+  const user = await requireUser();
+  if (user.role !== "INTERN") redirect(homePathFor(user.role));
+  return user;
+}
+
+/** Admin utama atau admin tim. */
+export async function requireAdmin(): Promise<CurrentUser> {
+  const user = await requireUser();
+  if (!isAdmin(user.role)) redirect(homePathFor(user.role));
+  return user;
+}
+
+/** Hanya admin utama. Admin tim diarahkan ke ringkasan. */
+export async function requireSuperAdmin(): Promise<CurrentUser> {
+  const user = await requireUser();
+  if (user.role !== "SUPER_ADMIN") redirect(homePathFor(user.role));
+  return user;
+}
+
+/**
+ * Batas tim yang boleh dilihat admin.
+ * - SUPER_ADMIN: null (semua tim)
+ * - TEAM_ADMIN: id timnya; jika belum punya tim, id yang tidak ada agar hasil kosong.
+ */
+export function teamScope(user: CurrentUser): string | null {
+  if (user.role === "SUPER_ADMIN") return null;
+  return user.teamId ?? "__no_team__";
 }

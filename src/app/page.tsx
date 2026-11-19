@@ -1,5 +1,7 @@
 import { CalendarRange, ListChecks, MapPin, ShieldCheck } from "lucide-react";
+import { Suspense } from "react";
 import { Logo } from "@/components/shell";
+import { OpenTeams, OpenTeamsSkeleton } from "@/components/open-teams";
 import { ButtonLink } from "@/components/ui/ui";
 
 const features = [
@@ -88,6 +90,25 @@ export default function Home() {
             <p className="text-2xl font-bold">96%</p>
           </div>
         </div>
+      </section>
+
+      <section className="pb-14" aria-labelledby="tim-terbuka">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="tim-terbuka" className="text-2xl font-bold tracking-tight">
+              Tim yang membuka magang
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Tersedia jalur Mandiri dan MagangHub (khusus lulusan).
+            </p>
+          </div>
+          <ButtonLink href="/daftar" variant="soft">
+            Daftar ke tim
+          </ButtonLink>
+        </div>
+        <Suspense fallback={<OpenTeamsSkeleton />}>
+          <OpenTeams />
+        </Suspense>
       </section>
 
       <section className="grid gap-4 pb-14 sm:grid-cols-2 lg:grid-cols-4">

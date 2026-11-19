@@ -13,23 +13,41 @@ import {
   btn,
   inputClass,
 } from "@/components/ui/ui";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin, teamScope } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatDate, todayDate } from "@/lib/dates";
-import type { Tone } from "@/lib/labels";
+import { internshipTypeInfo, type Tone } from "@/lib/labels";
 import clsx from "clsx";
 
 export const metadata: Metadata = { title: "Peserta" };
 
 export default async function InternsPage({ searchParams }: PageProps<"/admin/peserta">) {
-  await requireUser("ADMIN");
+  const admin = await requireAdmin();
   const sp = await searchParams;
-  const q = (Array.isArray(sp.q) ? sp.q[0] : sp.q)?.trim().slice(0, 80) ?? "";
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const q = one(sp.q)?.trim().slice(0, 80) ?? "";
+  const type = one(sp.type) === "MANDIRI" || one(sp.type) === "MAGANGHUB" ? one(sp.type) as "MANDIRI" | "MAGANGHUB" : "";
   const today = todayDate();
+
+  const teams =
+    admin.role === "SUPER_ADMIN"
+      ? await db.team.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
+      : [];
+  const pickedTeam = one(sp.team) ?? "";
+  // Admin tim selalu dibatasi ke timnya; admin utama boleh memilih tim.
+  const scope = teamScope(admin) ?? (teams.some((t) => t.id === pickedTeam) ? pickedTeam : null);
+  const regWhere = {
+    ...(scope ? { teamId: scope } : {}),
+    ...(type ? { type } : {}),
+  };
+  const filtered = Boolean(scope || type);
 
   const users = await db.user.findMany({
     where: {
       role: "INTERN",
+      ...(filtered
+        ? { registrations: { some: { ...regWhere, ...(teamScope(admin) ? { status: "APPROVED" as const } : {}) } } }
+        : {}),
       ...(q
         ? {
             OR: [
@@ -42,7 +60,11 @@ export default async function InternsPage({ searchParams }: PageProps<"/admin/pe
     },
     include: {
       profile: true,
-      registrations: { orderBy: { startDate: "desc" } },
+      registrations: {
+        where: regWhere,
+        include: { team: { select: { name: true } } },
+        orderBy: { startDate: "desc" },
+      },
       _count: { select: { attendances: true } },
     },
     orderBy: { createdAt: "desc" },
@@ -66,8 +88,8 @@ export default async function InternsPage({ searchParams }: PageProps<"/admin/pe
       <PageHeader title="Peserta" description={`${users.length} peserta${q ? ` untuk "${q}"` : ""}`} />
 
       <Card>
-        <form role="search" className="mb-5 flex gap-2">
-          <div className="relative flex-1">
+        <form role="search" className="mb-5 flex flex-wrap gap-2">
+          <div className="relative min-w-60 flex-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
             <label htmlFor="q" className="sr-only">
               Cari peserta
@@ -80,6 +102,29 @@ export default async function InternsPage({ searchParams }: PageProps<"/admin/pe
               className={clsx(inputClass, "pl-11")}
             />
           </div>
+          {teams.length > 0 ? (
+            <>
+              <label htmlFor="team" className="sr-only">
+                Tim
+              </label>
+              <select id="team" name="team" defaultValue={scope ?? ""} className={clsx(inputClass, "w-auto")}>
+                <option value="">Semua tim</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
+          <label htmlFor="type" className="sr-only">
+            Jenis magang
+          </label>
+          <select id="type" name="type" defaultValue={type} className={clsx(inputClass, "w-auto")}>
+            <option value="">Semua jenis</option>
+            <option value="MANDIRI">Mandiri</option>
+            <option value="MAGANGHUB">MagangHub</option>
+          </select>
           <button type="submit" className={clsx(btn.base, btn.primary)}>
             Cari
           </button>
@@ -117,7 +162,12 @@ export default async function InternsPage({ searchParams }: PageProps<"/admin/pe
                     <Td>
                       {latest ? (
                         <>
-                          <span className="block font-medium">{latest.division}</span>
+                          <span className="block font-medium">
+                            {latest.team.name}{" "}
+                            <span className="text-xs font-semibold text-muted">
+                              · {internshipTypeInfo[latest.type].label}
+                            </span>
+                          </span>
                           <span className="text-xs text-muted">
                             {formatDate(latest.startDate)} – {formatDate(latest.endDate)}
                           </span>
