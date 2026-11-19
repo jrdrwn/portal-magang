@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  INTERN
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AttendanceStatus {
+  PRESENT // hadir tepat waktu
+  LATE // hadir terlambat
+  PERMIT // izin
+  SICK // sakit
+}
+
+enum ActivityType {
+  WORK
+  NOT_WORK
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(INTERN)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile       Profile?
+  registrations Registration[]
+  attendances   Attendance[]
+  activities    Activity[]
+}
+
+model Profile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  phone       String?
+  institution String? // asal sekolah / kampus
+  major       String? // jurusan
+  studentId   String? // NIM / NIS
+  birthDate   DateTime? @db.Date
+  address     String?
+  bio         String?
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Registration {
+  id         String             @id @default(cuid())
+  userId     String
+  division   String
+  startDate  DateTime           @db.Date
+  endDate    DateTime           @db.Date
+  motivation String
+  status     RegistrationStatus @default(PENDING)
+  reviewNote String?
+  reviewedAt DateTime?
+  createdAt  DateTime           @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OfficeSetting {
+  id           Int      @id @default(1)
+  name         String   @default("Kantor Pusat")
+  latitude     Float    @default(-6.2088)
+  longitude    Float    @default(106.8456)
+  radiusMeters Int      @default(150)
+  workStart    String   @default("08:00") // jam masuk (WIB)
+  lateAfter    String   @default("08:15") // lewat jam ini dianggap terlambat
+  workEnd      String   @default("16:00")
+  updatedAt    DateTime @updatedAt
+}
+
+model Attendance {
+  id String @id @default(cuid())
+  userId String
+  date   DateTime @db.Date
+
+  status AttendanceStatus
+
+  checkInAt       DateTime?
+  checkInLat      Float?
+  checkInLng      Float?
+  checkInDistance Float? // meter dari titik kantor
+
+  checkOutAt       DateTime?
+  checkOutLat      Float?
+  checkOutLng      Float?
+  checkOutDistance Float?
+
+  note      String? // alasan untuk izin / sakit
+  createdAt DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activities Activity[]
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+model Activity {
+  id           String       @id @default(cuid())
+  userId       String
+  attendanceId String
+  date         DateTime     @db.Date
+  type         ActivityType
+  title        String
+  description  String?
+  createdAt    DateTime     @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attendance Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([date])
+}
