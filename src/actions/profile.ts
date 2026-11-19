@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { createSession } from "@/lib/session";
 import { isValidDateKey, keyToDate } from "@/lib/dates";
 import {
   str,
@@ -106,7 +107,24 @@ export async function changePassword(
 
   await db.user.update({
     where: { id: user.id },
-    data: { passwordHash: await bcrypt.hash(parsed.data.next, 10) },
+    data: {
+      passwordHash: await bcrypt.hash(parsed.data.next, 10),
+      passwordChangedAt: new Date(),
+    },
   });
-  return success("Password diganti.");
+  // Sesi lain (perangkat lain) tidak berlaku lagi; sesi ini dibuat ulang.
+  await createSession({ userId: user.id, role: user.role });
+  return success("Password diganti. Sesi di perangkat lain otomatis keluar.");
+}
+
+const nameSchema = z.object({ name: z.string().min(2, "Nama minimal 2 karakter").max(80) });
+
+/** Ganti nama tampilan (dipakai admin yang tidak punya profil peserta). */
+export async function updateAccountName(formData: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const parsed = nameSchema.safeParse({ name: str(formData, "name") });
+  if (!parsed.success) return validationFailure(parsed.error);
+  await db.user.update({ where: { id: user.id }, data: { name: parsed.data.name } });
+  revalidatePath("/", "layout");
+  return success("Nama diperbarui.");
 }

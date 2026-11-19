@@ -34,16 +34,22 @@ export async function signToken(payload: SessionPayload) {
     .sign(secretKey());
 }
 
+export type VerifiedSession = SessionPayload & { issuedAt: number };
+
 export async function verifyToken(
   token: string | undefined,
-): Promise<SessionPayload | null> {
+): Promise<VerifiedSession | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secretKey(), {
       algorithms: ["HS256"],
     });
     if (!payload.sub) return null;
-    return { userId: payload.sub, role: toRole(payload.role) };
+    return {
+      userId: payload.sub,
+      role: toRole(payload.role),
+      issuedAt: (payload.iat ?? 0) * 1000,
+    };
   } catch {
     return null;
   }

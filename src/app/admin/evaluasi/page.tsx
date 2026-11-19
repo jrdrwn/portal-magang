@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import {
   Avatar,
   Badge,
@@ -13,6 +13,7 @@ import {
   Table,
   Td,
   Th,
+  btn,
 } from "@/components/ui/ui";
 import { requireAdmin, teamScope } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -109,6 +110,17 @@ export default async function EvaluationsPage({ searchParams }: PageProps<"/admi
           </div>
         }
       />
+
+      <div className="mb-4 flex justify-end">
+        <a
+          href={`/admin/export/evaluasi?month=${month}`}
+          className={clsx(btn.base, btn.soft, "py-2.5")}
+          download
+        >
+          <Download className="size-4" aria-hidden />
+          Unduh CSV {formatMonth(month)}
+        </a>
+      </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <StatCard label="Peserta bulan ini" value={regs.length} tone="dark" />

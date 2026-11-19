@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { setUserActive } from "@/actions/admin";
+import { resetPassword } from "@/actions/password-reset";
 import { ActionButton } from "@/components/ui/form";
 import {
   Avatar,
@@ -90,6 +91,15 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
               </div>
             </div>
           </div>
+          <div className="flex flex-wrap items-start gap-2">
+          <ActionButton
+            action={resetPassword.bind(null, user.id)}
+            variant="soft"
+            showSuccess
+            confirmText={`Reset password ${user.name}? Password lama tidak bisa dipakai lagi.`}
+          >
+            Reset password
+          </ActionButton>
           {admin.role === "SUPER_ADMIN" ? (
           <ActionButton
             action={setUserActive.bind(null, user.id, !user.isActive)}
@@ -103,6 +113,7 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
             {user.isActive ? "Nonaktifkan akun" : "Aktifkan akun"}
           </ActionButton>
           ) : null}
+          </div>
         </div>
       </Card>
 

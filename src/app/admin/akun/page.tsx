@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createAdmin, setAdminActive, setAdminTeam } from "@/actions/admins";
+import { resetPassword } from "@/actions/password-reset";
 import { ActionButton, ActionForm, Field } from "@/components/ui/form";
 import {
   Avatar,
@@ -105,20 +106,21 @@ export default async function AdminAccountsPage() {
                   </div>
 
                   {a.id !== me.id ? (
-                    <div className="mt-3 flex flex-wrap items-start gap-3">
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
                       {a.role === "TEAM_ADMIN" && teams.length > 0 ? (
                         <ActionForm
                           action={setAdminTeam.bind(null, a.id)}
                           submitLabel="Pindah tim"
                           idPrefix={`a-${a.id}-`}
-                          className="flex flex-wrap items-end gap-2 space-y-0 [&>div:last-child]:pt-0"
+                          className="flex flex-wrap items-center gap-2 space-y-0! [&>div:last-child]:pt-0!"
+                          submitClassName="px-4 py-2"
                         >
                           <Field
                             label="Tim"
                             name="teamId"
                             as="select"
                             defaultValue={a.teamId ?? ""}
-                            className="min-w-48 [&_label]:sr-only [&_select]:py-2"
+                            className="min-w-44 [&_label]:sr-only [&_select]:py-2"
                           >
                             <option value="">Pilih tim</option>
                             {teams.map((t) => (
@@ -129,6 +131,14 @@ export default async function AdminAccountsPage() {
                           </Field>
                         </ActionForm>
                       ) : null}
+                      <ActionButton
+                        action={resetPassword.bind(null, a.id)}
+                        variant="soft"
+                        showSuccess
+                        confirmText={`Reset password ${a.name}?`}
+                      >
+                        Reset password
+                      </ActionButton>
                       <ActionButton
                         action={setAdminActive.bind(null, a.id, !a.isActive)}
                         variant={a.isActive ? "danger" : "primary"}

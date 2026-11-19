@@ -1,4 +1,5 @@
-import { LogOut, Sparkles } from "lucide-react";
+import { LogOut, Sparkles, UserRound } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { logout } from "@/actions/auth";
 import type { CurrentUser } from "@/lib/auth";
@@ -49,13 +50,17 @@ export function AppShell({
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center gap-3 rounded-3xl bg-canvas p-3">
+          <Link
+            href={variant === "admin" ? "/admin/akun-saya" : "/profil"}
+            title="Akun saya"
+            className="flex items-center gap-3 rounded-3xl bg-canvas p-3 transition hover:bg-brand-50"
+          >
             <Avatar name={user.name} />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{user.name}</p>
               <p className="truncate text-xs text-muted">{user.email}</p>
             </div>
-          </div>
+          </Link>
           <form action={logout}>
             <button
               type="submit"
@@ -71,6 +76,16 @@ export function AppShell({
       <div className="min-w-0 flex-1 pb-28 lg:pb-6">
         <header className="mb-6 flex items-center justify-between rounded-card bg-surface p-3 pl-4 shadow-card lg:hidden">
           <Logo />
+          <div className="flex items-center gap-2">
+          {variant === "admin" ? (
+            <Link
+              href="/admin/akun-saya"
+              aria-label="Akun saya"
+              className="grid size-10 place-items-center rounded-full bg-canvas text-muted"
+            >
+              <UserRound className="size-4" aria-hidden />
+            </Link>
+          ) : null}
           <form action={logout}>
             <button
               type="submit"
@@ -80,6 +95,7 @@ export function AppShell({
               <LogOut className="size-4" aria-hidden />
             </button>
           </form>
+          </div>
         </header>
         <main id="konten">{children}</main>
       </div>

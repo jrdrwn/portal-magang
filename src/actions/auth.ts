@@ -7,6 +7,13 @@ import { db } from "@/lib/db";
 import { createSession, destroySession } from "@/lib/session";
 import { homePathFor } from "@/lib/auth";
 import {
+  clientIp,
+  loginBlocked,
+  recordLogin,
+  recordRegister,
+  registerBlocked,
+} from "@/lib/rate-limit";
+import {
   failure,
   str,
   validationFailure,
@@ -40,6 +47,10 @@ export async function registerAccount(
   if (!parsed.success) return validationFailure(parsed.error);
   const { name, email, password } = parsed.data;
 
+  const ip = await clientIp();
+  const blocked = await registerBlocked(ip);
+  if (blocked) return failure(blocked);
+
   const exists = await db.user.findUnique({ where: { email } });
   if (exists) {
     return {
@@ -58,6 +69,7 @@ export async function registerAccount(
       profile: { create: {} },
     },
   });
+  await recordRegister(ip);
   await createSession({ userId: user.id, role: user.role });
   redirect("/pendaftaran");
 }
@@ -73,12 +85,18 @@ export async function login(formData: FormData): Promise<ActionResult> {
     password: str(formData, "password"),
   });
   if (!parsed.success) return validationFailure(parsed.error);
+  const { email } = parsed.data;
 
-  const user = await db.user.findUnique({ where: { email: parsed.data.email } });
+  const ip = await clientIp();
+  const blocked = await loginBlocked(email, ip);
+  if (blocked) return failure(blocked);
+
+  const user = await db.user.findUnique({ where: { email } });
   const valid = await bcrypt.compare(
     parsed.data.password,
     user?.passwordHash ?? DUMMY_HASH,
   );
+  await recordLogin(email, ip, Boolean(user && valid));
   if (!user || !valid) return failure("Email atau password salah.");
   if (!user.isActive) {
     return failure("Akun dinonaktifkan. Hubungi admin.");

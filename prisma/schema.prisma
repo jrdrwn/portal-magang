@@ -37,14 +37,16 @@ enum ActivityType {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  role         Role     @default(INTERN)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String
+  passwordHash      String
+  role              Role      @default(INTERN)
+  isActive          Boolean   @default(true)
+  // Sesi yang dibuat sebelum waktu ini ditolak (setelah ganti/reset password).
+  passwordChangedAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // Hanya untuk TEAM_ADMIN: tim yang dikelola.
   teamId String?
@@ -190,4 +192,23 @@ model Activity {
 
   @@index([userId, date])
   @@index([date])
+}
+
+enum AttemptKind {
+  LOGIN
+  REGISTER
+}
+
+// Catatan percobaan login/daftar untuk membatasi brute force. Baris lama dibersihkan otomatis.
+model AuthAttempt {
+  id        String      @id @default(cuid())
+  kind      AttemptKind
+  key       String // email (huruf kecil) untuk LOGIN, IP untuk REGISTER
+  ip        String?
+  success   Boolean
+  createdAt DateTime    @default(now())
+
+  @@index([kind, key, createdAt])
+  @@index([kind, ip, createdAt])
+  @@index([createdAt])
 }

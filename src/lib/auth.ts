@@ -26,11 +26,16 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       email: true,
       role: true,
       isActive: true,
+      passwordChangedAt: true,
       teamId: true,
       team: { select: { name: true } },
     },
   });
   if (!user || !user.isActive) return null;
+  // Tolak sesi lama setelah password diganti/di-reset. `iat` JWT dibulatkan ke detik.
+  if (user.passwordChangedAt && session.issuedAt < user.passwordChangedAt.getTime() - 1000) {
+    return null;
+  }
   return {
     id: user.id,
     name: user.name,
@@ -50,7 +55,8 @@ export function homePathFor(role: Role) {
 
 export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  // Lewat route yang menghapus cookie, agar tidak terjadi redirect berputar.
+  if (!user) redirect("/auth/expired");
   return user;
 }
 

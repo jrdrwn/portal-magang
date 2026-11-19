@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
+import { LoginNotice } from "@/components/login-notice";
 import { login } from "@/actions/auth";
 import { ActionForm, Field } from "@/components/ui/form";
 
@@ -12,6 +14,9 @@ export default function LoginPage() {
       <p className="mb-8 mt-2 text-sm text-muted">
         Masuk untuk absen dan melihat aktivitas Anda.
       </p>
+      <Suspense fallback={null}>
+        <LoginNotice />
+      </Suspense>
       <ActionForm action={login} submitLabel="Masuk" submitClassName="w-full py-3.5">
         <Field
           label="Email"
@@ -30,7 +35,10 @@ export default function LoginPage() {
           required
         />
       </ActionForm>
-      <p className="mt-6 text-center text-sm text-muted">
+      <p className="mt-4 text-center text-sm text-muted">
+        Lupa password? Hubungi admin tim atau admin utama untuk reset.
+      </p>
+      <p className="mt-2 text-center text-sm text-muted">
         Belum punya akun?{" "}
         <Link href="/daftar" className="font-semibold text-brand-600 hover:underline">
           Daftar sekarang

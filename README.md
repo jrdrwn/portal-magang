@@ -38,8 +38,19 @@ Data demo: `SEED_DEMO=1 npm run db:seed` membuat 4 tim, admin tim `admin.web@dem
 
 Produksi: `npm run db:deploy && npm run build && npm start`.
 
+## Keamanan & operasional
+
+- **Sesi**: JWT di cookie httpOnly (7 hari). Ganti/reset password atau menonaktifkan akun langsung membatalkan sesi lama di semua perangkat.
+- **Batas percobaan**: login diblokir 15 menit setelah 5 kali gagal per email (atau 20 kali per IP); maksimal 5 akun baru per IP per jam. IP dibaca dari `x-forwarded-for`, jadi jalankan di belakang proxy/platform tepercaya (Vercel, Cloudflare, nginx).
+- **Lupa password**: belum ada email. Admin tim (untuk pesertanya) atau admin utama (semua akun) menekan **Reset password** dan menyampaikan password sementara.
+- **Header keamanan**: `X-Frame-Options`, `Permissions-Policy` (geolokasi hanya situs ini), HSTS, dan CSP minimal di `next.config.ts`.
+- **Health check**: `GET /api/health` → `200 {"status":"ok"}` atau `503` jika database tidak terjangkau.
+- **Export**: CSV absensi (maks. 93 hari) dan evaluasi per bulan, mengikuti scope tim. Pemisah `;` + BOM agar langsung rapi di Excel lokal Indonesia.
+- **PWA**: ada `manifest.webmanifest` dan ikon, jadi portal bisa "Tambahkan ke layar utama" di HP.
+
 ## Catatan
 
 - Zona waktu "hari ini" dan jam kerja memakai WIB (`src/lib/dates.ts`).
 - Lokasi dari browser bisa dipalsukan; validasi radius mengurangi, bukan menghilangkan, kecurangan.
-- Sesi: JWT di cookie httpOnly. `src/proxy.ts` hanya pengecekan awal; otorisasi sebenarnya ada di `requireUser()`.
+- `src/proxy.ts` hanya pengecekan awal; otorisasi sebenarnya ada di `requireUser()` / `requireAdmin()` dan setiap Server Action.
+- Setelah `git pull` yang mengubah `prisma/schema.prisma`, jalankan `npx prisma generate` dan `npm run db:deploy`.

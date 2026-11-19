@@ -8,12 +8,23 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  applicationName: "Portal Magang",
+  ...(process.env.APP_URL ? { metadataBase: new URL(process.env.APP_URL) } : {}),
   title: {
     default: "Portal Magang",
     template: "%s · Portal Magang",
   },
   description:
     "Portal peserta magang: pendaftaran, absensi berbasis lokasi, aktivitas harian, dan monitoring admin.",
+  openGraph: {
+    type: "website",
+    locale: "id_ID",
+    siteName: "Portal Magang",
+    title: "Portal Magang",
+    description: "Pendaftaran, absensi lokasi, aktivitas harian, dan evaluasi peserta magang.",
+  },
+  appleWebApp: { capable: true, title: "Magang", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {

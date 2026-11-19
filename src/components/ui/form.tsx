@@ -183,12 +183,15 @@ export function ActionButton({
   variant = "soft",
   confirmText,
   className,
+  showSuccess = false,
 }: {
   action: () => Promise<ActionResult>;
   children: ReactNode;
   variant?: "soft" | "danger" | "ghost" | "primary" | "brand";
   confirmText?: string;
   className?: string;
+  /** Tampilkan pesan sukses (mis. password sementara). */
+  showSuccess?: boolean;
 }) {
   const [result, setResult] = useState<ActionResult | null>(null);
   const [pending, startTransition] = useTransition();
@@ -216,6 +219,14 @@ export function ActionButton({
       {result && !result.ok ? (
         <span role="alert" className="text-xs font-medium text-[#a0153f]">
           {result.error}
+        </span>
+      ) : null}
+      {showSuccess && result?.ok && result.message ? (
+        <span
+          role="status"
+          className="max-w-md select-all rounded-2xl bg-lime/50 px-3 py-2 text-xs font-medium text-[#2d4a00]"
+        >
+          {result.message}
         </span>
       ) : null}
     </span>
