@@ -1,20 +1,23 @@
 import { Suspense, type ReactNode } from "react";
-import { AppShell, ShellSkeleton } from "@/components/shell";
+import { AccountCard, AccountCardSkeleton, ShellFrame } from "@/components/shell";
 import { requireIntern } from "@/lib/auth";
 
 export default function InternLayout({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<ShellSkeleton />}>
-      <InternShell>{children}</InternShell>
-    </Suspense>
+    <ShellFrame
+      variant="intern"
+      account={
+        <Suspense fallback={<AccountCardSkeleton />}>
+          <InternAccount />
+        </Suspense>
+      }
+    >
+      {children}
+    </ShellFrame>
   );
 }
 
-async function InternShell({ children }: { children: ReactNode }) {
+async function InternAccount() {
   const user = await requireIntern();
-  return (
-    <AppShell user={user} variant="intern">
-      {children}
-    </AppShell>
-  );
+  return <AccountCard user={user} href="/profil" />;
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { ExternalLink } from "lucide-react";
 import { submitAbsence } from "@/actions/attendance";
 import { AttendancePanel } from "@/components/attendance-panel";
@@ -22,7 +23,33 @@ import { getActiveRegistration, getOfficeSetting } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Absensi" };
 
-export default async function AttendancePage() {
+export default function AttendancePage() {
+  return (
+    <>
+      <PageHeader
+        title="Absensi"
+        description="Absen masuk dan pulang berdasarkan lokasi Anda."
+      />
+      <Suspense fallback={<AttendanceSkeleton />}>
+        <AttendanceContent />
+      </Suspense>
+    </>
+  );
+}
+
+function AttendanceSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Memuat absensi">
+      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <div className="h-[30rem] animate-pulse rounded-card bg-ink/90" />
+        <div className="h-80 animate-pulse rounded-card bg-surface" />
+      </div>
+      <div className="mt-6 h-64 animate-pulse rounded-card bg-surface" />
+    </div>
+  );
+}
+
+async function AttendanceContent() {
   const user = await requireIntern();
   const today = todayDate();
 
@@ -58,11 +85,6 @@ export default async function AttendancePage() {
 
   return (
     <>
-      <PageHeader
-        title="Absensi"
-        description="Absen masuk dan pulang berdasarkan lokasi Anda."
-      />
-
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <AttendancePanel
           office={{

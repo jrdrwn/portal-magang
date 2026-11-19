@@ -20,13 +20,51 @@ export function Logo() {
   );
 }
 
-export function AppShell({
+export function AccountCard({
   user,
+  href,
+}: {
+  user: Pick<CurrentUser, "name" | "email">;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      title="Akun saya"
+      className="flex items-center gap-3 rounded-3xl bg-canvas p-3 transition hover:bg-brand-50"
+    >
+      <Avatar name={user.name} />
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">{user.name}</p>
+        <p className="truncate text-xs text-muted">{user.email}</p>
+      </div>
+    </Link>
+  );
+}
+
+export function AccountCardSkeleton() {
+  return (
+    <div aria-hidden className="flex items-center gap-3 rounded-3xl bg-canvas p-3">
+      <span className="size-10 shrink-0 animate-pulse rounded-full bg-line" />
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <span className="block h-3.5 w-24 animate-pulse rounded-full bg-line" />
+        <span className="block h-3 w-32 animate-pulse rounded-full bg-line" />
+      </div>
+    </div>
+  );
+}
+
+export function ShellFrame({
   variant,
+  superAdmin = false,
+  badge,
+  account,
   children,
 }: {
-  user: CurrentUser;
   variant: "intern" | "admin";
+  superAdmin?: boolean;
+  badge?: ReactNode;
+  account: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -34,33 +72,12 @@ export function AppShell({
       <aside className="sticky top-6 hidden h-[calc(100dvh-3rem)] w-64 shrink-0 flex-col justify-between gap-4 overflow-y-auto rounded-card bg-surface p-5 shadow-card lg:flex">
         <div className="space-y-6">
           <Logo />
-          {variant === "admin" ? (
-            <div className="rounded-3xl bg-lime px-3 py-2 text-center">
-              <p className="text-xs font-bold uppercase tracking-wider">
-                {user.role === "SUPER_ADMIN" ? "Admin utama" : "Admin tim"}
-              </p>
-              {user.role === "TEAM_ADMIN" ? (
-                <p className="truncate text-xs font-medium text-ink/70">
-                  {user.teamName ?? "Belum ada tim"}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-          <SideNav variant={variant} superAdmin={user.role === "SUPER_ADMIN"} />
+          {badge}
+          <SideNav variant={variant} superAdmin={superAdmin} />
         </div>
 
         <div className="space-y-3">
-          <Link
-            href={variant === "admin" ? "/admin/akun-saya" : "/profil"}
-            title="Akun saya"
-            className="flex items-center gap-3 rounded-3xl bg-canvas p-3 transition hover:bg-brand-50"
-          >
-            <Avatar name={user.name} />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{user.name}</p>
-              <p className="truncate text-xs text-muted">{user.email}</p>
-            </div>
-          </Link>
+          {account}
           <form action={logout}>
             <button
               type="submit"
@@ -100,8 +117,44 @@ export function AppShell({
         <main id="konten">{children}</main>
       </div>
 
-      <BottomNav variant={variant} superAdmin={user.role === "SUPER_ADMIN"} />
+      <BottomNav variant={variant} superAdmin={superAdmin} />
     </div>
+  );
+}
+
+export function AppShell({
+  user,
+  variant,
+  children,
+}: {
+  user: CurrentUser;
+  variant: "intern" | "admin";
+  children: ReactNode;
+}) {
+  return (
+    <ShellFrame
+      variant={variant}
+      superAdmin={user.role === "SUPER_ADMIN"}
+      badge={
+        variant === "admin" ? (
+          <div className="rounded-3xl bg-lime px-3 py-2 text-center">
+            <p className="text-xs font-bold uppercase tracking-wider">
+              {user.role === "SUPER_ADMIN" ? "Admin utama" : "Admin tim"}
+            </p>
+            {user.role === "TEAM_ADMIN" ? (
+              <p className="truncate text-xs font-medium text-ink/70">
+                {user.teamName ?? "Belum ada tim"}
+              </p>
+            ) : null}
+          </div>
+        ) : null
+      }
+      account={
+        <AccountCard user={user} href={variant === "admin" ? "/admin/akun-saya" : "/profil"} />
+      }
+    >
+      {children}
+    </ShellFrame>
   );
 }
 
