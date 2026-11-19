@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import { AppShell, ShellSkeleton } from "@/components/shell";
-import { requireUser } from "@/lib/auth";
+import { requireIntern } from "@/lib/auth";
 
 export default function InternLayout({ children }: { children: ReactNode }) {
   return (
@@ -11,7 +11,7 @@ export default function InternLayout({ children }: { children: ReactNode }) {
 }
 
 async function InternShell({ children }: { children: ReactNode }) {
-  const user = await requireUser("INTERN");
+  const user = await requireIntern();
   return (
     <AppShell user={user} variant="intern">
       {children}

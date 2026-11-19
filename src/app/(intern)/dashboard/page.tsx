@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { CalendarCheck, Clock, HeartPulse, MapPin } from "lucide-react";
 import { db } from "@/lib/db";
-import { requireUser } from "@/lib/auth";
+import { requireIntern } from "@/lib/auth";
 import {
   daysBetweenInclusive,
   formatDate,
@@ -14,7 +14,12 @@ import {
   getAttendanceSummary,
   getTodayAttendance,
 } from "@/lib/queries";
-import { activityLabel, attendanceLabel, registrationLabel } from "@/lib/labels";
+import {
+  activityLabel,
+  attendanceLabel,
+  internshipTypeInfo,
+  registrationLabel,
+} from "@/lib/labels";
 import {
   Badge,
   ButtonLink,
@@ -28,7 +33,7 @@ import {
 export const metadata: Metadata = { title: "Beranda" };
 
 export default async function DashboardPage() {
-  const user = await requireUser("INTERN");
+  const user = await requireIntern();
   const today = todayDate();
 
   const [active, upcoming, pending, attendance, recent] = await Promise.all([
@@ -39,6 +44,7 @@ export default async function DashboardPage() {
     }),
     db.registration.findFirst({
       where: { userId: user.id, status: "PENDING" },
+      include: { team: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
     getTodayAttendance(user.id, today),
@@ -205,7 +211,12 @@ export default async function DashboardPage() {
           <CardTitle title="Periode magang" />
           {active ? (
             <>
-              <p className="text-lg font-bold">{active.division}</p>
+              <p className="text-lg font-bold">{active.team.name}</p>
+              <div className="mt-1">
+                <Badge tone={internshipTypeInfo[active.type].tone}>
+                  {internshipTypeInfo[active.type].label}
+                </Badge>
+              </div>
               <p className="mt-1 text-sm text-muted">
                 {formatDate(active.startDate)} – {formatDate(active.endDate)}
               </p>
@@ -234,7 +245,7 @@ export default async function DashboardPage() {
           ) : pending ? (
             <div className="space-y-2">
               <Badge tone={registrationLabel.PENDING.tone}>Menunggu persetujuan</Badge>
-              <p className="text-sm font-semibold">{pending.division}</p>
+              <p className="text-sm font-semibold">{pending.team.name}</p>
               <p className="text-sm text-muted">
                 {formatDate(pending.startDate)} – {formatDate(pending.endDate)}
               </p>

@@ -10,7 +10,8 @@ import {
   btn,
   inputClass,
 } from "@/components/ui/ui";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin, teamScope } from "@/lib/auth";
+import { internInTeam } from "@/lib/queries";
 import { db } from "@/lib/db";
 import {
   dateKey,
@@ -34,7 +35,8 @@ const types: { key: ActivityType | "ALL"; label: string }[] = [
 ];
 
 export default async function AdminActivities({ searchParams }: PageProps<"/admin/aktivitas">) {
-  await requireUser("ADMIN");
+  const admin = await requireAdmin();
+  const scope = teamScope(admin);
   const sp = await searchParams;
   const rawDate = Array.isArray(sp.date) ? sp.date[0] : sp.date;
   const rawType = Array.isArray(sp.type) ? sp.type[0] : sp.type;
@@ -42,7 +44,11 @@ export default async function AdminActivities({ searchParams }: PageProps<"/admi
   const type = types.find((t) => t.key === rawType)?.key ?? "ALL";
 
   const activities = await db.activity.findMany({
-    where: { date, ...(type === "ALL" ? {} : { type }) },
+    where: {
+      date,
+      ...(type === "ALL" ? {} : { type }),
+      ...(scope ? { user: internInTeam(scope) } : {}),
+    },
     include: { user: { select: { id: true, name: true } }, attendance: true },
     orderBy: [{ user: { name: "asc" } }, { createdAt: "asc" }],
     take: 300,

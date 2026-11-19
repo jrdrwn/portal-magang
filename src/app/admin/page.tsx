@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarClock, UserCheck, UserX, Users } from "lucide-react";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin, teamScope } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   addDays,
@@ -12,7 +12,7 @@ import {
   todayDate,
 } from "@/lib/dates";
 import { attendanceLabel } from "@/lib/labels";
-import { getActiveInterns } from "@/lib/queries";
+import { getActiveInterns, internInTeam } from "@/lib/queries";
 import {
   Avatar,
   Badge,
@@ -27,27 +27,35 @@ import {
 export const metadata: Metadata = { title: "Ringkasan Admin" };
 
 export default async function AdminHome() {
-  await requireUser("ADMIN");
+  const admin = await requireAdmin();
+  const scope = teamScope(admin);
+  const regScope = scope ? { teamId: scope } : {};
   const today = todayDate();
   const weekStart = addDays(today, -6);
 
   const [interns, todays, pendingCount, pendingList, weekRows] = await Promise.all([
-    getActiveInterns(today),
+    getActiveInterns(today, scope),
     db.attendance.findMany({
-      where: { date: today },
+      where: { date: today, ...(scope ? { user: internInTeam(scope) } : {}) },
       include: { user: { select: { id: true, name: true } } },
       orderBy: { createdAt: "desc" },
     }),
-    db.registration.count({ where: { status: "PENDING" } }),
+    db.registration.count({ where: { status: "PENDING", ...regScope } }),
     db.registration.findMany({
-      where: { status: "PENDING" },
-      include: { user: { select: { name: true } } },
+      where: { status: "PENDING", ...regScope },
+      include: {
+        user: { select: { name: true } },
+        team: { select: { name: true } },
+      },
       orderBy: { createdAt: "asc" },
       take: 5,
     }),
     db.attendance.groupBy({
       by: ["date", "status"],
-      where: { date: { gte: weekStart, lte: today } },
+      where: {
+        date: { gte: weekStart, lte: today },
+        ...(scope ? { user: internInTeam(scope) } : {}),
+      },
       _count: { _all: true },
     }),
   ]);
@@ -74,7 +82,7 @@ export default async function AdminHome() {
   return (
     <>
       <PageHeader
-        title="Ringkasan"
+        title={admin.role === "TEAM_ADMIN" ? `Ringkasan · ${admin.teamName ?? "Tanpa tim"}` : "Ringkasan"}
         description={`${formatWeekday(today)}, ${formatDate(today, "long")}`}
         action={<ButtonLink href="/admin/absensi">Monitor absensi</ButtonLink>}
       />
@@ -194,7 +202,7 @@ export default async function AdminHome() {
                   <li key={r.id} className="rounded-3xl bg-canvas/70 p-4">
                     <p className="font-semibold">{r.user.name}</p>
                     <p className="text-xs text-muted">
-                      {r.division} · {formatDate(r.startDate)} – {formatDate(r.endDate)}
+                      {r.team.name} · {formatDate(r.startDate)} – {formatDate(r.endDate)}
                     </p>
                   </li>
                 ))}
@@ -217,7 +225,7 @@ export default async function AdminHome() {
                       <Avatar name={i.name} size="sm" />
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-semibold">{i.name}</span>
-                        <span className="block text-xs text-muted">{i.division}</span>
+                        <span className="block text-xs text-muted">{i.team}</span>
                       </span>
                     </Link>
                   </li>

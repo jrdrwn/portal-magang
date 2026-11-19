@@ -36,3 +36,25 @@ export const activityLabel: Record<ActivityType, { label: string; tone: Tone }> 
     WORK: { label: "Bekerja", tone: "brand" },
     NOT_WORK: { label: "Tidak bekerja", tone: "neutral" },
   };
+
+export const internshipTypeInfo: Record<
+  "MANDIRI" | "MAGANGHUB",
+  { label: string; description: string; tone: Tone }
+> = {
+  MANDIRI: {
+    label: "Mandiri",
+    description: "Pelajar atau mahasiswa yang magang atas pengajuan sendiri/kampus.",
+    tone: "brand",
+  },
+  MAGANGHUB: {
+    label: "MagangHub",
+    description: "Peserta program MagangHub, khusus yang sudah lulus.",
+    tone: "info",
+  },
+};
+
+export const roleLabel: Record<"SUPER_ADMIN" | "TEAM_ADMIN" | "INTERN", string> = {
+  SUPER_ADMIN: "Admin utama",
+  TEAM_ADMIN: "Admin tim",
+  INTERN: "Peserta",
+};

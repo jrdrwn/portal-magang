@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import { AppShell, ShellSkeleton } from "@/components/shell";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
@@ -11,7 +11,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 }
 
 async function AdminShell({ children }: { children: ReactNode }) {
-  const user = await requireUser("ADMIN");
+  const user = await requireAdmin();
   return (
     <AppShell user={user} variant="admin">
       {children}

@@ -1,43 +1,35 @@
 import type { Metadata } from "next";
 import { ExternalLink } from "lucide-react";
 import { updateOffice } from "@/actions/admin";
-import { UseMyLocation } from "@/components/use-my-location";
+import { OfficeMapPicker } from "@/components/office-map-picker";
 import { ActionForm, Field } from "@/components/ui/form";
 import { Card, CardTitle, PageHeader } from "@/components/ui/ui";
-import { requireUser } from "@/lib/auth";
+import { requireSuperAdmin } from "@/lib/auth";
 import { mapsUrl } from "@/lib/geo";
 import { getOfficeSetting } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Pengaturan" };
 
 export default async function SettingsPage() {
-  await requireUser("ADMIN");
+  await requireSuperAdmin();
   const o = await getOfficeSetting();
 
   return (
     <>
       <PageHeader
         title="Pengaturan absensi"
-        description="Titik lokasi, radius, dan jam kerja yang dipakai untuk memvalidasi absen."
+        description="Atur titik kantor dan radius absen langsung di peta, lalu jam kerja."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <Card>
           <CardTitle title="Lokasi & jam kerja" hint="Jam memakai zona waktu WIB." />
-          <ActionForm action={updateOffice} submitLabel="Simpan pengaturan" variant="brand" extra={<UseMyLocation />}>
+          <ActionForm action={updateOffice} submitLabel="Simpan pengaturan" variant="brand">
             <Field label="Nama lokasi" name="name" defaultValue={o.name} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Latitude" name="latitude" inputMode="decimal" defaultValue={String(o.latitude)} />
-              <Field label="Longitude" name="longitude" inputMode="decimal" defaultValue={String(o.longitude)} />
-            </div>
-            <Field
-              label="Radius absen (meter)"
-              name="radiusMeters"
-              type="number"
-              min={20}
-              max={5000}
-              defaultValue={o.radiusMeters}
-              hint="Peserta hanya bisa absen dalam jarak ini dari titik kantor."
+            <OfficeMapPicker
+              latitude={o.latitude}
+              longitude={o.longitude}
+              radiusMeters={o.radiusMeters}
             />
             <div className="grid gap-4 sm:grid-cols-3">
               <Field label="Jam masuk" name="workStart" type="time" defaultValue={o.workStart} />

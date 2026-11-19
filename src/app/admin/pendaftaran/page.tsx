@@ -9,10 +9,10 @@ import {
   EmptyState,
   PageHeader,
 } from "@/components/ui/ui";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin, teamScope } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { daysBetweenInclusive, formatDate } from "@/lib/dates";
-import { registrationLabel } from "@/lib/labels";
+import { internshipTypeInfo, registrationLabel } from "@/lib/labels";
 import type { RegistrationStatus } from "@/generated/prisma/enums";
 
 export const metadata: Metadata = { title: "Pendaftaran" };
@@ -27,21 +27,28 @@ const tabs: { key: RegistrationStatus | "ALL"; label: string }[] = [
 export default async function AdminRegistrations({
   searchParams,
 }: PageProps<"/admin/pendaftaran">) {
-  await requireUser("ADMIN");
+  const admin = await requireAdmin();
+  const scope = teamScope(admin);
+  const regScope = scope ? { teamId: scope } : {};
   const sp = await searchParams;
   const raw = Array.isArray(sp.status) ? sp.status[0] : sp.status;
   const current = tabs.find((t) => t.key === raw)?.key ?? "PENDING";
 
   const [rows, grouped] = await Promise.all([
     db.registration.findMany({
-      where: current === "ALL" ? {} : { status: current },
+      where: current === "ALL" ? regScope : { status: current, ...regScope },
       include: {
         user: { select: { id: true, name: true, email: true, profile: true } },
+        team: { select: { name: true } },
       },
       orderBy: { createdAt: current === "PENDING" ? "asc" : "desc" },
       take: 100,
     }),
-    db.registration.groupBy({ by: ["status"], _count: { _all: true } }),
+    db.registration.groupBy({
+      by: ["status"],
+      where: regScope,
+      _count: { _all: true },
+    }),
   ]);
   const counts = Object.fromEntries(grouped.map((g) => [g.status, g._count._all]));
   const total = grouped.reduce((s, g) => s + g._count._all, 0);
@@ -103,8 +110,15 @@ export default async function AdminRegistrations({
 
               <div className="grid grid-cols-2 gap-3 rounded-3xl bg-canvas/70 p-4 text-sm">
                 <div>
-                  <p className="text-xs text-muted">Divisi</p>
-                  <p className="font-semibold">{r.division}</p>
+                  <p className="text-xs text-muted">Tim</p>
+                  <p className="font-semibold">{r.team.name}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-muted">Jenis magang</p>
+                  <p className="font-semibold">
+                    {internshipTypeInfo[r.type].label}
+                    {r.graduationYear ? ` · lulus ${r.graduationYear}` : ""}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted">Durasi</p>
