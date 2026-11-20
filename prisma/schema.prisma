@@ -1,0 +1,388 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN // admin utama magang
+  TEAM_ADMIN // admin per tim
+  INTERN
+}
+
+enum InternshipType {
+  MANDIRI
+  MAGANGHUB // program MagangHub, untuk yang sudah lulus
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AttendanceStatus {
+  PRESENT // hadir tepat waktu
+  LATE // hadir terlambat
+  PERMIT // izin
+  SICK // sakit
+}
+
+enum ActivityType {
+  WORK
+  NOT_WORK
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String
+  passwordHash      String
+  role              Role      @default(INTERN)
+  isActive          Boolean   @default(true)
+  // Sesi yang dibuat sebelum waktu ini ditolak (setelah ganti/reset password).
+  passwordChangedAt DateTime?
+  // Pengingat harian (notifikasi di aplikasi + push ke perangkat terdaftar)
+  reminders         Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Hanya untuk TEAM_ADMIN: tim yang dikelola.
+  teamId String?
+  team   Team?   @relation("TeamAdmins", fields: [teamId], references: [id], onDelete: SetNull)
+
+  profile           Profile?
+  registrations     Registration[]
+  attendances       Attendance[]       @relation("AttendanceIntern")
+  activities        Activity[]
+  evaluations       Evaluation[]       @relation("EvaluationIntern")
+  evaluationsBy     Evaluation[]       @relation("EvaluationEvaluator")
+  notifications     Notification[]
+  surveys           SurveyResponse[]
+  auditLogs         AuditLog[]
+  pushSubscriptions PushSubscription[]
+  remindersSent     ReminderSent[]
+  corrections       Attendance[]       @relation("AttendanceCorrector")
+
+  @@index([teamId])
+}
+
+model Team {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  isOpen      Boolean   @default(true) // tampil & bisa dipilih saat pendaftaran
+  quota       Int? // maks. peserta disetujui dengan periode bertumpang tindih; kosong = tanpa batas
+  regOpensAt  DateTime? @db.Date // jadwal buka pendaftaran; kosong = tanpa batas
+  regClosesAt DateTime? @db.Date
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  admins        User[]         @relation("TeamAdmins")
+  registrations Registration[]
+}
+
+model Profile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  phone       String?
+  institution String? // asal sekolah / kampus
+  major       String? // jurusan
+  studentId   String? // NIM / NIS
+  birthDate   DateTime? @db.Date
+  address     String?
+  bio         String?
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Registration {
+  id             String             @id @default(cuid())
+  userId         String
+  teamId         String
+  type           InternshipType     @default(MANDIRI)
+  graduationYear Int? // wajib untuk MAGANGHUB
+  startDate      DateTime           @db.Date
+  endDate        DateTime           @db.Date
+  motivation     String
+  status         RegistrationStatus @default(PENDING)
+  reviewNote     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime           @default(now())
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team        Team            @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  evaluations Evaluation[]
+  survey      SurveyResponse?
+  certificate Certificate?
+  documents   Document[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([teamId])
+}
+
+model Evaluation {
+  id             String   @id @default(cuid())
+  registrationId String
+  internId       String
+  evaluatorId    String?
+  month          DateTime @db.Date // tanggal 1 bulan yang dinilai
+
+  discipline    Int // kedisiplinan
+  workQuality   Int // kualitas kerja
+  communication Int // komunikasi
+  initiative    Int // inisiatif
+  teamwork      Int // kerja sama
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  intern       User         @relation("EvaluationIntern", fields: [internId], references: [id], onDelete: Cascade)
+  evaluator    User?        @relation("EvaluationEvaluator", fields: [evaluatorId], references: [id], onDelete: SetNull)
+
+  @@unique([registrationId, month])
+  @@index([internId])
+  @@index([month])
+}
+
+model OfficeSetting {
+  id           Int    @id @default(1)
+  name         String @default("Kantor Pusat")
+  latitude     Float  @default(-6.2088)
+  longitude    Float  @default(106.8456)
+  radiusMeters Int    @default(150)
+  workStart    String @default("08:00") // jam masuk (WIB)
+  lateAfter    String @default("08:15") // lewat jam ini dianggap terlambat
+  workEnd      String @default("16:00")
+
+  // Sertifikat
+  orgName     String @default("Portal Magang")
+  certCity    String @default("Jakarta")
+  signerName  String @default("")
+  signerTitle String @default("Koordinator Program Magang")
+
+  // Hari kerja: angka getUTCDay (0=Minggu ... 6=Sabtu), dipisah koma
+  workDays      String   @default("1,2,3,4,5,6")
+  requireSelfie Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
+}
+
+model Attendance {
+  id     String   @id @default(cuid())
+  userId String
+  date   DateTime @db.Date
+
+  status AttendanceStatus
+
+  checkInAt       DateTime?
+  checkInLat      Float?
+  checkInLng      Float?
+  checkInDistance Float? // meter dari titik kantor
+
+  checkOutAt       DateTime?
+  checkOutLat      Float?
+  checkOutLng      Float?
+  checkOutDistance Float?
+
+  note String? // alasan untuk izin / sakit
+
+  checkInPhotoKey  String?
+  checkOutPhotoKey String?
+
+  // Koreksi oleh admin
+  correctedById    String?
+  correctedAt      DateTime?
+  correctionReason String?
+  createdAt        DateTime  @default(now())
+
+  user        User       @relation("AttendanceIntern", fields: [userId], references: [id], onDelete: Cascade)
+  correctedBy User?      @relation("AttendanceCorrector", fields: [correctedById], references: [id], onDelete: SetNull)
+  activities  Activity[]
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+model Activity {
+  id           String       @id @default(cuid())
+  userId       String
+  attendanceId String
+  date         DateTime     @db.Date
+  type         ActivityType
+  title        String
+  description  String?
+  createdAt    DateTime     @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attendance Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([date])
+}
+
+enum AttemptKind {
+  LOGIN
+  REGISTER
+}
+
+// Catatan percobaan login/daftar untuk membatasi brute force. Baris lama dibersihkan otomatis.
+model AuthAttempt {
+  id        String      @id @default(cuid())
+  kind      AttemptKind
+  key       String // email (huruf kecil) untuk LOGIN, IP untuk REGISTER
+  ip        String?
+  success   Boolean
+  createdAt DateTime    @default(now())
+
+  @@index([kind, key, createdAt])
+  @@index([kind, ip, createdAt])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  REGISTRATION_SUBMITTED
+  REGISTRATION_APPROVED
+  REGISTRATION_REJECTED
+  ABSENCE_REPORTED
+  EVALUATION_PUBLISHED
+  SURVEY_REMINDER
+  CERTIFICATE_ISSUED
+  ATTENDANCE_CORRECTED
+  DAILY_REMINDER
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  href      String?
+  refId     String? // id objek terkait, untuk mencegah pengingat ganda
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@index([userId, type, refId])
+}
+
+// Survei akhir magang, syarat terbitnya sertifikat. Nilai 1–5.
+model SurveyResponse {
+  id             String   @id @default(cuid())
+  registrationId String   @unique
+  userId         String
+  overall        Int // kepuasan keseluruhan
+  relevance      Int // kesesuaian tugas dengan minat/jurusan
+  mentoring      Int // bimbingan admin tim/mentor
+  environment    Int // lingkungan & fasilitas kerja
+  recommend      Int // kesediaan merekomendasikan
+  highlights     String // hal paling bermanfaat
+  suggestions    String? // saran perbaikan
+  createdAt      DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Certificate {
+  id             String   @id @default(cuid())
+  registrationId String   @unique
+  number         String   @unique // mis. 007/MAGANG/XI/2026
+  code           String   @unique // kode verifikasi publik
+  issuedAt       DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+}
+
+enum HolidayKind {
+  NATIONAL // libur nasional
+  JOINT_LEAVE // cuti bersama
+  OFFICE // libur kantor
+}
+
+model Holiday {
+  id        String      @id @default(cuid())
+  date      DateTime    @unique @db.Date
+  name      String
+  kind      HolidayKind @default(NATIONAL)
+  createdAt DateTime    @default(now())
+}
+
+enum DocumentKind {
+  CV
+  COVER_LETTER // surat pengantar kampus/sekolah (Mandiri)
+}
+
+model Document {
+  id             String       @id @default(cuid())
+  registrationId String
+  kind           DocumentKind
+  fileKey        String       @unique
+  fileName       String
+  mimeType       String
+  size           Int
+  createdAt      DateTime     @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@unique([registrationId, kind])
+}
+
+// Jejak tindakan admin.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String // mis. registration.approve
+  targetType String? // mis. Registration
+  targetId   String?
+  teamId     String? // untuk menyaring log per tim
+  summary    String
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([teamId, createdAt])
+  @@index([action, createdAt])
+}
+
+// Langganan Web Push per perangkat/browser.
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Penanda pengingat yang sudah dikirim (kunci unik mencegah pengingat ganda saat permintaan bersamaan).
+model ReminderSent {
+  userId    String
+  key       String // mis. harian:2026-11-20:checkin
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, key])
+  @@index([createdAt])
+}

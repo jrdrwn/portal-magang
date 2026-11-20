@@ -1,0 +1,140 @@
+import Link from "next/link";
+import clsx from "clsx";
+import { ArrowRight, Check } from "lucide-react";
+import type { ReactNode } from "react";
+
+import { Celebrate } from "@/components/celebrate";
+import type { NextStep, StepState, StripStep } from "@/lib/steps";
+
+const stepTone: Record<StepState, string> = {
+  done: "bg-lime text-ink",
+  current: "bg-brand-600 text-white ring-4 ring-brand-100",
+  late: "bg-[#e0527a] text-white ring-4 ring-rose",
+  upcoming: "bg-canvas text-muted",
+  skipped: "bg-canvas text-muted",
+};
+
+function Step({ step, index, last }: { step: StripStep; index: number; last: boolean }) {
+  return (
+    <li className="relative flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center sm:flex-row sm:items-center sm:gap-3 sm:text-left">
+      {!last ? (
+        <span
+          aria-hidden
+          className={clsx(
+            "absolute left-[calc(50%+1.25rem)] right-[calc(-50%+1.25rem)] top-4 h-0.5 rounded-full transition-colors duration-500 sm:hidden",
+            step.state === "done" ? "bg-lime" : "bg-line",
+          )}
+        />
+      ) : null}
+      <span
+        key={step.state}
+        data-step-state={step.state}
+        className={clsx(
+          "relative z-10 grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold transition-colors duration-300",
+          stepTone[step.state],
+          step.state === "done" && "animate-pop",
+        )}
+        aria-hidden
+      >
+        {step.state === "done" ? <Check className="size-4" strokeWidth={3} /> : index + 1}
+      </span>
+      <span className="min-w-0">
+        <span className={clsx("block text-xs font-semibold sm:text-sm", step.state === "upcoming" && "text-muted")}>
+          {step.label}
+        </span>
+        <span className={clsx("block truncate text-[11px] sm:text-xs", step.state === "late" ? "font-semibold text-[#a0153f]" : "text-muted")}>
+          {step.detail}
+        </span>
+      </span>
+      <span className="sr-only">
+        {step.state === "done" ? "selesai" : step.state === "late" ? "terlambat" : step.state === "current" ? "sekarang" : "nanti"}
+      </span>
+      {!last ? (
+        <span
+          aria-hidden
+          className={clsx(
+            "hidden h-0.5 flex-1 rounded-full transition-colors duration-500 sm:block",
+            step.state === "done" ? "bg-lime" : "bg-line",
+          )}
+        />
+      ) : null}
+    </li>
+  );
+}
+
+/** Strip langkah harian (dipakai peserta & admin). */
+export function StepsStrip({
+  steps,
+  next,
+  doneText,
+}: {
+  steps: StripStep[];
+  next: NextStep | null;
+  doneText: string;
+}) {
+  const done = steps.filter((s) => s.state === "done").length;
+  const complete = done === steps.length;
+  return (
+    <section aria-label="Langkah hari ini" className="mb-6 rounded-card bg-surface p-4 shadow-card sm:p-5">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-sm font-bold">
+          Langkah hari ini{" "}
+          <span
+            key={done}
+            data-testid="langkah-counter"
+            className={clsx(
+              "ml-1 inline-block rounded-full px-2 py-0.5 text-xs",
+              complete ? "bg-lime" : "bg-brand-50 text-brand-700",
+              done > 0 && "animate-pop",
+            )}
+          >
+            {done}/{steps.length}
+          </span>
+        </p>
+        {complete ? (
+          <p className="relative text-xs font-semibold text-[#2d4a00] animate-pop-in">
+            {doneText}
+            <Celebrate id={doneText} />
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+        <ol className="flex flex-1 items-start gap-2 sm:items-center">
+          {steps.map((s, i) => (
+            <Step key={s.key} step={s} index={i} last={i === steps.length - 1} />
+          ))}
+        </ol>
+        {next ? (
+          <Link
+            href={next.href}
+            className="flex items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-white transition hover:bg-ink/85 lg:w-72"
+          >
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">{next.label}</span>
+              <span className="block truncate text-xs text-white/70">{next.hint}</span>
+            </span>
+            <ArrowRight className="size-4 shrink-0" aria-hidden />
+          </Link>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+/** Pesan singkat pengganti strip (hari libur, izin/sakit). */
+export function StepsNote({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <section aria-label="Langkah hari ini" className="mb-6 flex items-center gap-3 rounded-card bg-surface p-4 shadow-card">
+      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-sky text-[#1c4a8a]">{icon}</span>
+      <p className="text-sm">
+        <span className="font-semibold">Langkah hari ini · </span>
+        {children}
+      </p>
+    </section>
+  );
+}
+
+export function DailyStepsSkeleton() {
+  return <div aria-hidden className="mb-6 h-[124px] animate-pulse rounded-card bg-surface lg:h-[92px]" />;
+}
