@@ -92,7 +92,7 @@ async function login(page: Page, email: string, password = "Demo#12345") {
   const web = await session();
   const w = web.page;
   await login(w, "admin.web@demo.local");
-  await w.getByText("Ringkasan · Web Development").waitFor();
+  await w.getByRole("heading", { name: "Ringkasan · Web Development" }).waitFor();
   check("admin tim Web: ringkasan sesuai tim", true);
   await w.screenshot({ path: `${shots}/admin-tim-ringkasan.png`, fullPage: true });
   await w.goto(`${BASE}/admin/pendaftaran`);
@@ -189,7 +189,7 @@ async function login(page: Page, email: string, password = "Demo#12345") {
   await s.screenshot({ path: `${shots}/admin-akun.png`, fullPage: true });
   const qaAdmin = (await session()).page;
   await login(qaAdmin, "admin.qa@test.local", "RahasiaQA1");
-  await qaAdmin.getByText("Ringkasan · QA Testing").waitFor();
+  await qaAdmin.getByRole("heading", { name: "Ringkasan · QA Testing" }).waitFor();
   check("akun admin baru bisa login sebagai admin tim QA", true);
 
   // ---------- Pengaturan: peta ----------
