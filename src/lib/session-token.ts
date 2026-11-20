@@ -26,7 +26,8 @@ function secretKey() {
 }
 
 export async function signToken(payload: SessionPayload) {
-  return new SignJWT({ role: payload.role })
+  // `t` = waktu terbit dalam milidetik (iat JWT hanya sampai detik), untuk membatalkan sesi lama dengan tepat.
+  return new SignJWT({ role: payload.role, t: Date.now() })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.userId)
     .setIssuedAt()
@@ -48,7 +49,7 @@ export async function verifyToken(
     return {
       userId: payload.sub,
       role: toRole(payload.role),
-      issuedAt: (payload.iat ?? 0) * 1000,
+      issuedAt: typeof payload.t === "number" ? payload.t : (payload.iat ?? 0) * 1000,
     };
   } catch {
     return null;

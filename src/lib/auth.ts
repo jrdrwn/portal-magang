@@ -32,8 +32,8 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     },
   });
   if (!user || !user.isActive) return null;
-  // Tolak sesi lama setelah password diganti/di-reset. `iat` JWT dibulatkan ke detik.
-  if (user.passwordChangedAt && session.issuedAt < user.passwordChangedAt.getTime() - 1000) {
+  // Tolak sesi yang dibuat sebelum password diganti/di-reset.
+  if (user.passwordChangedAt && session.issuedAt < user.passwordChangedAt.getTime()) {
     return null;
   }
   return {
