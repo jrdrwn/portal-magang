@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ChoiceGroup, Field } from "./ui/form";
+import { ChoiceGroup, Field, FileField } from "./ui/form";
 import { internshipTypeInfo } from "@/lib/labels";
 
 export function RegistrationFields({
   teams,
   today,
 }: {
-  teams: { id: string; name: string; description: string | null }[];
+  teams: { id: string; name: string; description: string | null; closesLabel?: string }[];
   today: string;
 }) {
   const [type, setType] = useState<"MANDIRI" | "MAGANGHUB">("MANDIRI");
@@ -48,13 +48,23 @@ export function RegistrationFields({
         options={teams.map((t) => ({
           value: t.id,
           label: t.name,
-          description: t.description,
+          description: [t.description, t.closesLabel].filter(Boolean).join(" · ") || null,
         }))}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Mulai" name="startDate" type="date" min={today} />
         <Field label="Selesai" name="endDate" type="date" min={today} />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FileField label="CV" name="cv" hint="Wajib untuk semua pendaftar." />
+        {type === "MANDIRI" ? (
+          <FileField
+            label="Surat pengantar kampus/sekolah"
+            name="coverLetter"
+            hint="Wajib untuk jalur Mandiri."
+          />
+        ) : null}
       </div>
       <Field
         label="Motivasi"

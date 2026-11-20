@@ -5,6 +5,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireIntern } from "@/lib/auth";
 import { notifyTeamAdmins } from "@/lib/notifications";
+import { deleteFile, detectType, putFile, type FileType } from "@/lib/storage";
+import { quotaUsed, teamAcceptingWhere } from "@/lib/queries";
 import {
   dateKey,
   daysBetweenInclusive,
@@ -21,6 +23,22 @@ import {
 } from "@/lib/action-result";
 
 const MAX_DURATION_DAYS = 366;
+const MAX_DOC_BYTES = 2 * 1024 * 1024;
+
+type Upload = { kind: "CV" | "COVER_LETTER"; name: string; bytes: Uint8Array; type: FileType };
+
+/** Validasi satu berkas: wajib/opsional, maks. 2 MB, PDF/JPG/PNG berdasarkan isi file. */
+async function readUpload(formData: FormData, field: string, required: boolean) {
+  const file = formData.get(field);
+  if (!(file instanceof File) || file.size === 0) {
+    return required ? { error: "Berkas wajib diunggah" } : { upload: null };
+  }
+  if (file.size > MAX_DOC_BYTES) return { error: "Ukuran maksimal 2 MB" };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const type = detectType(bytes);
+  if (!type) return { error: "Format harus PDF, JPG, atau PNG" };
+  return { upload: { name: file.name.slice(0, 120) || `berkas.${type.ext}`, bytes, type } };
+}
 
 const schema = z.object({
   teamId: z.string().min(1, "Pilih tim"),
@@ -76,10 +94,20 @@ export async function createRegistration(
     }
   }
 
-  const team = await db.team.findUnique({ where: { id: parsed.data.teamId } });
-  if (!team || !team.isOpen) {
-    fieldErrors.teamId = ["Tim tidak tersedia atau sudah ditutup"];
+  const team = await db.team.findFirst({ where: { id: parsed.data.teamId, ...teamAcceptingWhere() } });
+  if (!team) {
+    fieldErrors.teamId = ["Tim tidak tersedia atau pendaftarannya sudah ditutup"];
+  } else if (team.quota != null && start <= end && (await quotaUsed(team.id, start, end)) >= team.quota) {
+    fieldErrors.teamId = [`Kuota tim ${team.name} sudah penuh untuk periode ini`];
   }
+
+  const uploads: Upload[] = [];
+  const cv = await readUpload(formData, "cv", true);
+  if ("error" in cv) fieldErrors.cv = [cv.error!];
+  else if (cv.upload) uploads.push({ kind: "CV", ...cv.upload });
+  const letter = await readUpload(formData, "coverLetter", parsed.data.type === "MANDIRI");
+  if ("error" in letter) fieldErrors.coverLetter = [letter.error!];
+  else if (letter.upload && parsed.data.type === "MANDIRI") uploads.push({ kind: "COVER_LETTER", ...letter.upload });
 
   if (Object.keys(fieldErrors).length > 0) {
     return { ok: false, error: "Periksa kembali isian Anda.", fieldErrors };
@@ -102,17 +130,35 @@ export async function createRegistration(
     );
   }
 
-  const created = await db.registration.create({
-    data: {
-      userId: user.id,
-      teamId: parsed.data.teamId,
-      type: parsed.data.type,
-      graduationYear,
-      startDate: start,
-      endDate: end,
-      motivation: parsed.data.motivation,
-    },
-  });
+  const keys: string[] = [];
+  let created;
+  try {
+    for (const u of uploads) keys.push(await putFile("documents", u.type, u.bytes));
+    created = await db.registration.create({
+      data: {
+        userId: user.id,
+        teamId: parsed.data.teamId,
+        type: parsed.data.type,
+        graduationYear,
+        startDate: start,
+        endDate: end,
+        motivation: parsed.data.motivation,
+        documents: {
+          create: uploads.map((u, i) => ({
+            kind: u.kind,
+            fileKey: keys[i],
+            fileName: u.name,
+            mimeType: u.type.mime,
+            size: u.bytes.byteLength,
+          })),
+        },
+      },
+    });
+  } catch (err) {
+    await Promise.all(keys.map(deleteFile));
+    console.error("Gagal menyimpan pendaftaran", err);
+    return failure("Pendaftaran gagal disimpan. Coba lagi.");
+  }
 
   await notifyTeamAdmins(parsed.data.teamId, {
     type: "REGISTRATION_SUBMITTED",
@@ -129,9 +175,14 @@ export async function createRegistration(
 
 export async function cancelRegistration(id: string): Promise<ActionResult> {
   const user = await requireIntern();
+  const docs = await db.document.findMany({
+    where: { registration: { id, userId: user.id, status: "PENDING" } },
+    select: { fileKey: true },
+  });
   const res = await db.registration.deleteMany({
     where: { id, userId: user.id, status: "PENDING" },
   });
+  if (res.count > 0) await Promise.all(docs.map((d) => deleteFile(d.fileKey)));
   if (res.count === 0) {
     return failure("Pendaftaran tidak ditemukan atau sudah diproses admin.");
   }

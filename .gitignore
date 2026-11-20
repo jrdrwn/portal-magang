@@ -41,3 +41,11 @@ yarn-error.log*
 next-env.d.ts
 /src/generated
 !.env.example
+
+# file unggahan (dokumen pendaftaran, swafoto absen)
+/storage
+
+# hasil tes e2e
+/test-results
+/playwright-report
+/.e2e-storage

@@ -120,7 +120,7 @@ async function main() {
     for (let back = 14; back >= 0; back--) {
       const date = dayStart(-back);
       const dow = date.getUTCDay();
-      if (dow === 0 || dow === 6) continue;
+      if (dow === 0) continue; // Minggu libur (hari kerja default Senin–Sabtu)
       if (back === 0 && i === 2) continue; // satu peserta belum absen hari ini
 
       const permit = (back + i) % 9 === 0;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DocumentLinks } from "@/components/document-links";
 import { cancelRegistration, createRegistration } from "@/actions/registration";
 import { ActionButton, ActionForm } from "@/components/ui/form";
 import { RegistrationFields } from "@/components/registration-fields";
@@ -24,7 +25,7 @@ export default async function RegistrationPage() {
   const [registrations, teams] = await Promise.all([
     db.registration.findMany({
       where: { userId: user.id },
-      include: { team: { select: { name: true } } },
+      include: { team: { select: { name: true } }, documents: { select: { id: true, kind: true, fileName: true, size: true }, orderBy: { kind: "asc" } }, },
       orderBy: { createdAt: "desc" },
     }),
     getOpenTeams(),
@@ -47,7 +48,20 @@ export default async function RegistrationPage() {
             />
           ) : (
           <ActionForm action={createRegistration} submitLabel="Kirim pendaftaran" variant="brand" resetOnSuccess>
-            <RegistrationFields teams={teams} today={today} />
+            <RegistrationFields
+              teams={teams.map((t) => ({
+                id: t.id,
+                name: t.name,
+                description: t.description,
+                closesLabel: [
+                  t.regClosesAt ? `Pendaftaran s.d. ${formatDate(t.regClosesAt)}` : null,
+                  t.quota != null ? `kuota ${t.quota}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(", "),
+              }))}
+              today={today}
+            />
           </ActionForm>
           )}
         </Card>
@@ -80,6 +94,9 @@ export default async function RegistrationPage() {
                     <Badge tone={registrationLabel[r.status].tone}>
                       {registrationLabel[r.status].label}
                     </Badge>
+                  </div>
+                  <div className="mt-3">
+                    <DocumentLinks docs={r.documents} />
                   </div>
                   {r.reviewNote ? (
                     <p className="mt-3 rounded-2xl bg-white p-3 text-sm">

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CalendarCheck, Clock, HeartPulse, MapPin } from "lucide-react";
+import { CalendarCheck, CircleSlash, Clock, HeartPulse, MapPin } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireIntern } from "@/lib/auth";
 import {
@@ -9,9 +9,9 @@ import {
   formatWeekday,
   todayDate,
 } from "@/lib/dates";
+import { registrationSummary } from "@/lib/calendar";
 import {
   getActiveRegistration,
-  getAttendanceSummary,
   getTodayAttendance,
 } from "@/lib/queries";
 import {
@@ -60,8 +60,8 @@ export default async function DashboardPage() {
   ]);
 
   const summary = active
-    ? await getAttendanceSummary(user.id, active.startDate, today)
-    : { present: 0, late: 0, permit: 0, sick: 0 };
+    ? (await registrationSummary(active)).summary
+    : { present: 0, late: 0, permit: 0, sick: 0, absent: 0, holiday: 0, workdays: 0 };
 
   const total = active ? daysBetweenInclusive(active.startDate, active.endDate) : 0;
   const elapsed = active
@@ -167,7 +167,7 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
             <StatCard
               label="Hadir"
               value={summary.present + summary.late}
@@ -188,6 +188,13 @@ export default async function DashboardPage() {
               hint="hari tidak bekerja"
               tone="peach"
               icon={<HeartPulse className="size-4" aria-hidden />}
+            />
+            <StatCard
+              label="Alpa"
+              value={summary.absent}
+              hint="hari kerja tanpa absen"
+              tone="light"
+              icon={<CircleSlash className="size-4" aria-hidden />}
             />
           </div>
 

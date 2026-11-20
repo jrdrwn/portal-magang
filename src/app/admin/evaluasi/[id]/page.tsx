@@ -19,6 +19,7 @@ import {
   monthStart,
 } from "@/lib/evaluation";
 import { internshipTypeInfo } from "@/lib/labels";
+import { summariesFor } from "@/lib/calendar";
 
 export const metadata: Metadata = { title: "Nilai peserta" };
 
@@ -48,17 +49,13 @@ export default async function EvaluateIntern({
   const inPeriod = reg.startDate <= end && reg.endDate >= start;
   const existing = reg.evaluations[0];
 
-  const [att, workCount] = await Promise.all([
-    db.attendance.groupBy({
-      by: ["status"],
-      where: { userId: reg.userId, date: { gte: start, lte: end } },
-      _count: { _all: true },
-    }),
+  const [summaries, workCount] = await Promise.all([
+    summariesFor([reg], start, end),
     db.activity.count({
       where: { userId: reg.userId, type: "WORK", date: { gte: start, lte: end } },
     }),
   ]);
-  const n = (s: string) => att.find((a) => a.status === s)?._count._all ?? 0;
+  const sum = summaries.get(reg.userId)!;
   const avg = existing ? averageScore(existing) : null;
 
   return (
@@ -95,9 +92,9 @@ export default async function EvaluateIntern({
       </Card>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Hadir" value={n("PRESENT") + n("LATE")} hint={`${n("LATE")} terlambat`} tone="lime" />
-        <StatCard label="Izin" value={n("PERMIT")} tone="sky" />
-        <StatCard label="Sakit" value={n("SICK")} tone="peach" />
+        <StatCard label="Hadir" value={sum.present + sum.late} hint={`${sum.late} terlambat`} tone="lime" />
+        <StatCard label="Izin / sakit" value={sum.permit + sum.sick} hint={`${sum.permit} izin · ${sum.sick} sakit`} tone="sky" />
+        <StatCard label="Alpa" value={sum.absent} hint={`dari ${sum.workdays} hari kerja`} tone="peach" />
         <StatCard label="Aktivitas kerja" value={workCount} hint="tercatat bulan ini" tone="light" />
       </div>
 

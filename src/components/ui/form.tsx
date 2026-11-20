@@ -1,10 +1,11 @@
 "use client";
 
 import clsx from "clsx";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import {
   createContext,
   useContext,
+  useEffect,
   useRef,
   useState,
   useTransition,
@@ -405,5 +406,75 @@ export function RatingField({ label, name }: { label: string; name: string }) {
         </p>
       ) : null}
     </fieldset>
+  );
+}
+
+/** Unggah berkas dengan tampilan bergaya; menampilkan nama file terpilih. */
+export function FileField({
+  label,
+  name,
+  hint,
+  accept = "application/pdf,image/jpeg,image/png",
+}: {
+  label: string;
+  name: string;
+  hint?: string;
+  accept?: string;
+}) {
+  const { result, idPrefix } = useContext(FormContext);
+  const errors = result?.fieldErrors?.[name];
+  const id = `${idPrefix}f-${name}`;
+  const [fileName, setFileName] = useState<string | null>(null);
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const form = ref.current?.form;
+    if (!form) return;
+    const onReset = () => setFileName(null);
+    form.addEventListener("reset", onReset);
+    return () => form.removeEventListener("reset", onReset);
+  }, []);
+
+  return (
+    <div>
+      <span className="mb-1.5 block text-sm font-semibold">{label}</span>
+      <label
+        htmlFor={id}
+        className={clsx(
+          "flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed bg-canvas/60 px-4 py-3 text-sm transition",
+          "focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-100 hover:border-brand-200",
+          errors?.length ? "border-[#e0527a]" : "border-line",
+        )}
+      >
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-700">
+          <Upload className="size-4" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className={clsx("block truncate font-medium", !fileName && "text-muted")}>
+            {fileName ?? "Pilih berkas"}
+          </span>
+        </span>
+        <input
+          ref={ref}
+          id={id}
+          name={name}
+          type="file"
+          accept={accept}
+          aria-invalid={errors?.length ? true : undefined}
+          aria-describedby={errors?.length ? `${id}-err` : `${id}-hint`}
+          onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+          className="sr-only"
+        />
+      </label>
+      {errors?.length ? (
+        <p id={`${id}-err`} className="mt-1.5 text-xs font-medium text-[#a0153f]">
+          {errors[0]}
+        </p>
+      ) : (
+        <p id={`${id}-hint`} className="mt-1.5 text-xs text-muted">
+          {hint ? `${hint} ` : ""}PDF/JPG/PNG, maks. 2 MB.
+        </p>
+      )}
+    </div>
   );
 }

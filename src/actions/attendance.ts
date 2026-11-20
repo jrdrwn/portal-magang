@@ -8,6 +8,8 @@ import { notifyTeamAdmins } from "@/lib/notifications";
 import { minutesOfDay, parseClock, todayDate } from "@/lib/dates";
 import { distanceMeters, formatDistance } from "@/lib/geo";
 import { getActiveRegistration, getOfficeSetting } from "@/lib/queries";
+import { nonWorkingReason } from "@/lib/calendar";
+import { deleteFile, detectType, putFile } from "@/lib/storage";
 import {
   failure,
   str,
@@ -51,10 +53,32 @@ async function checkLocation(input: unknown) {
   return { ok: true as const, office, distance, ...parsed.data };
 }
 
-export async function checkIn(input: {
-  lat: number;
-  lng: number;
-}): Promise<ActionResult> {
+const MAX_SELFIE_BYTES = 1.5 * 1024 * 1024;
+
+/** Ambil & validasi lokasi + swafoto dari FormData. */
+async function readCheckPayload(formData: FormData, requireSelfie: boolean) {
+  const lat = Number(formData.get("lat"));
+  const lng = Number(formData.get("lng"));
+  const loc = await checkLocation({ lat, lng });
+  if (!loc.ok) return loc;
+
+  const photo = formData.get("photo");
+  if (!(photo instanceof File) || photo.size === 0) {
+    if (requireSelfie) return { ok: false as const, error: "Ambil swafoto terlebih dahulu." };
+    return { ...loc, photo: null };
+  }
+  if (photo.size > MAX_SELFIE_BYTES) {
+    return { ok: false as const, error: "Ukuran swafoto terlalu besar (maks. 1,5 MB)." };
+  }
+  const bytes = new Uint8Array(await photo.arrayBuffer());
+  const type = detectType(bytes);
+  if (!type || type.ext === "pdf") {
+    return { ok: false as const, error: "Swafoto harus berupa gambar JPG atau PNG." };
+  }
+  return { ...loc, photo: { bytes, type } };
+}
+
+export async function checkIn(formData: FormData): Promise<ActionResult> {
   const user = await requireIntern();
   const today = todayDate();
 
@@ -64,16 +88,20 @@ export async function checkIn(input: {
       "Anda belum memiliki pendaftaran magang aktif untuk hari ini.",
     );
   }
+  const closed = await nonWorkingReason(today);
+  if (closed) return failure(`${closed} Absen tidak diperlukan.`);
 
   const existing = await db.attendance.findUnique({
     where: { userId_date: { userId: user.id, date: today } },
   });
   if (existing) return failure("Anda sudah mencatat kehadiran hari ini.");
 
-  const loc = await checkLocation(input);
-  if (!loc.ok) return failure(loc.error);
+  const office = await getOfficeSetting();
+  const payload = await readCheckPayload(formData, office.requireSelfie);
+  if (!payload.ok) return failure(payload.error);
 
-  const late = minutesOfDay() > parseClock(loc.office.lateAfter);
+  const photoKey = payload.photo ? await putFile("selfies", payload.photo.type, payload.photo.bytes) : null;
+  const late = minutesOfDay() > parseClock(payload.office.lateAfter);
   try {
     await db.attendance.create({
       data: {
@@ -81,13 +109,15 @@ export async function checkIn(input: {
         date: today,
         status: late ? "LATE" : "PRESENT",
         checkInAt: new Date(),
-        checkInLat: loc.lat,
-        checkInLng: loc.lng,
-        checkInDistance: loc.distance,
+        checkInLat: payload.lat,
+        checkInLng: payload.lng,
+        checkInDistance: payload.distance,
+        checkInPhotoKey: photoKey,
       },
     });
   } catch {
     // Unique (userId, date): klik ganda / dua tab.
+    if (photoKey) await deleteFile(photoKey);
     return failure("Anda sudah mencatat kehadiran hari ini.");
   }
 
@@ -99,10 +129,7 @@ export async function checkIn(input: {
   );
 }
 
-export async function checkOut(input: {
-  lat: number;
-  lng: number;
-}): Promise<ActionResult> {
+export async function checkOut(formData: FormData): Promise<ActionResult> {
   const user = await requireIntern();
   const today = todayDate();
 
@@ -114,19 +141,25 @@ export async function checkOut(input: {
   }
   if (attendance.checkOutAt) return failure("Anda sudah absen pulang.");
 
-  const loc = await checkLocation(input);
-  if (!loc.ok) return failure(loc.error);
+  const office = await getOfficeSetting();
+  const payload = await readCheckPayload(formData, office.requireSelfie);
+  if (!payload.ok) return failure(payload.error);
 
+  const photoKey = payload.photo ? await putFile("selfies", payload.photo.type, payload.photo.bytes) : null;
   const res = await db.attendance.updateMany({
     where: { id: attendance.id, checkOutAt: null },
     data: {
       checkOutAt: new Date(),
-      checkOutLat: loc.lat,
-      checkOutLng: loc.lng,
-      checkOutDistance: loc.distance,
+      checkOutLat: payload.lat,
+      checkOutLng: payload.lng,
+      checkOutDistance: payload.distance,
+      checkOutPhotoKey: photoKey,
     },
   });
-  if (res.count === 0) return failure("Anda sudah absen pulang.");
+  if (res.count === 0) {
+    if (photoKey) await deleteFile(photoKey);
+    return failure("Anda sudah absen pulang.");
+  }
 
   refresh();
   return success("Absen pulang tercatat. Sampai jumpa besok!");
@@ -157,6 +190,9 @@ export async function submitAbsence(formData: FormData): Promise<ActionResult> {
       "Anda belum memiliki pendaftaran magang aktif untuk hari ini.",
     );
   }
+
+  const closed = await nonWorkingReason(today);
+  if (closed) return failure(`${closed} Tidak perlu melapor izin/sakit.`);
 
   const existing = await db.attendance.findUnique({
     where: { userId_date: { userId: user.id, date: today } },

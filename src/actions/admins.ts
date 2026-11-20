@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { requireSuperAdmin } from "@/lib/auth";
 import {
@@ -27,7 +28,7 @@ const adminSchema = z
   });
 
 export async function createAdmin(formData: FormData): Promise<ActionResult> {
-  await requireSuperAdmin();
+  const me = await requireSuperAdmin();
   const parsed = adminSchema.safeParse({
     name: str(formData, "name"),
     email: str(formData, "email").toLowerCase(),
@@ -53,7 +54,7 @@ export async function createAdmin(formData: FormData): Promise<ActionResult> {
     };
   }
 
-  await db.user.create({
+  const created = await db.user.create({
     data: {
       name: d.name,
       email: d.email,
@@ -61,6 +62,12 @@ export async function createAdmin(formData: FormData): Promise<ActionResult> {
       role: d.role,
       teamId: d.role === "TEAM_ADMIN" ? d.teamId : null,
     },
+  });
+  await audit(me, "admin.create", {
+    summary: `${d.name} (${d.email}) · ${d.role === "SUPER_ADMIN" ? "admin utama" : "admin tim"}`,
+    targetType: "User",
+    targetId: created.id,
+    teamId: created.teamId,
   });
   revalidatePath("/admin", "layout");
   return success(`Akun admin ${d.email} dibuat.`);
@@ -71,7 +78,7 @@ export async function setAdminTeam(
   userId: string,
   formData: FormData,
 ): Promise<ActionResult> {
-  await requireSuperAdmin();
+  const me = await requireSuperAdmin();
   const teamId = str(formData, "teamId");
   if (!teamId || !(await db.team.findUnique({ where: { id: teamId } }))) {
     return failure("Pilih tim yang valid.");
@@ -81,6 +88,11 @@ export async function setAdminTeam(
     data: { teamId },
   });
   if (res.count === 0) return failure("Admin tim tidak ditemukan.");
+  const [u, t] = await Promise.all([
+    db.user.findUnique({ where: { id: userId }, select: { name: true } }),
+    db.team.findUnique({ where: { id: teamId }, select: { name: true } }),
+  ]);
+  await audit(me, "admin.move_team", { summary: `${u?.name} → tim ${t?.name}`, targetType: "User", targetId: userId, teamId });
   revalidatePath("/admin", "layout");
   return success("Tim admin diperbarui.");
 }
@@ -108,6 +120,8 @@ export async function setAdminActive(
     data: { isActive },
   });
   if (res.count === 0) return failure("Admin tidak ditemukan.");
+  const u = await db.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+  await audit(me, isActive ? "user.activate" : "user.deactivate", { summary: `${u?.name} (${u?.email}) · admin`, targetType: "User", targetId: userId });
   revalidatePath("/admin", "layout");
   return success(isActive ? "Akun admin diaktifkan." : "Akun admin dinonaktifkan.");
 }

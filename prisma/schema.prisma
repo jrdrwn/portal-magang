@@ -54,23 +54,28 @@ model User {
 
   profile       Profile?
   registrations Registration[]
-  attendances   Attendance[]
+  attendances   Attendance[]     @relation("AttendanceIntern")
   activities    Activity[]
   evaluations   Evaluation[]     @relation("EvaluationIntern")
   evaluationsBy Evaluation[]     @relation("EvaluationEvaluator")
   notifications Notification[]
   surveys       SurveyResponse[]
+  auditLogs     AuditLog[]
+  corrections   Attendance[]     @relation("AttendanceCorrector")
 
   @@index([teamId])
 }
 
 model Team {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String    @id @default(cuid())
+  name        String    @unique
   description String?
-  isOpen      Boolean  @default(true) // tampil & bisa dipilih saat pendaftaran
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isOpen      Boolean   @default(true) // tampil & bisa dipilih saat pendaftaran
+  quota       Int? // maks. peserta disetujui dengan periode bertumpang tindih; kosong = tanpa batas
+  regOpensAt  DateTime? @db.Date // jadwal buka pendaftaran; kosong = tanpa batas
+  regClosesAt DateTime? @db.Date
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   admins        User[]         @relation("TeamAdmins")
   registrations Registration[]
@@ -110,6 +115,7 @@ model Registration {
   evaluations Evaluation[]
   survey      SurveyResponse?
   certificate Certificate?
+  documents   Document[]
 
   @@index([userId])
   @@index([status])
@@ -153,11 +159,15 @@ model OfficeSetting {
   workEnd      String @default("16:00")
 
   // Sertifikat
-  orgName     String   @default("Portal Magang")
-  certCity    String   @default("Jakarta")
-  signerName  String   @default("")
-  signerTitle String   @default("Koordinator Program Magang")
-  updatedAt   DateTime @updatedAt
+  orgName     String @default("Portal Magang")
+  certCity    String @default("Jakarta")
+  signerName  String @default("")
+  signerTitle String @default("Koordinator Program Magang")
+
+  // Hari kerja: angka getUTCDay (0=Minggu ... 6=Sabtu), dipisah koma
+  workDays      String   @default("1,2,3,4,5,6")
+  requireSelfie Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
 }
 
 model Attendance {
@@ -177,11 +187,20 @@ model Attendance {
   checkOutLng      Float?
   checkOutDistance Float?
 
-  note      String? // alasan untuk izin / sakit
-  createdAt DateTime @default(now())
+  note String? // alasan untuk izin / sakit
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  activities Activity[]
+  checkInPhotoKey  String?
+  checkOutPhotoKey String?
+
+  // Koreksi oleh admin
+  correctedById    String?
+  correctedAt      DateTime?
+  correctionReason String?
+  createdAt        DateTime  @default(now())
+
+  user        User       @relation("AttendanceIntern", fields: [userId], references: [id], onDelete: Cascade)
+  correctedBy User?      @relation("AttendanceCorrector", fields: [correctedById], references: [id], onDelete: SetNull)
+  activities  Activity[]
 
   @@unique([userId, date])
   @@index([date])
@@ -231,6 +250,7 @@ enum NotificationType {
   EVALUATION_PUBLISHED
   SURVEY_REMINDER
   CERTIFICATE_ISSUED
+  ATTENDANCE_CORRECTED
 }
 
 model Notification {
@@ -278,4 +298,58 @@ model Certificate {
   issuedAt       DateTime @default(now())
 
   registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+}
+
+enum HolidayKind {
+  NATIONAL // libur nasional
+  JOINT_LEAVE // cuti bersama
+  OFFICE // libur kantor
+}
+
+model Holiday {
+  id        String      @id @default(cuid())
+  date      DateTime    @unique @db.Date
+  name      String
+  kind      HolidayKind @default(NATIONAL)
+  createdAt DateTime    @default(now())
+}
+
+enum DocumentKind {
+  CV
+  COVER_LETTER // surat pengantar kampus/sekolah (Mandiri)
+}
+
+model Document {
+  id             String       @id @default(cuid())
+  registrationId String
+  kind           DocumentKind
+  fileKey        String       @unique
+  fileName       String
+  mimeType       String
+  size           Int
+  createdAt      DateTime     @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@unique([registrationId, kind])
+}
+
+// Jejak tindakan admin.
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String // mis. registration.approve
+  targetType String? // mis. Registration
+  targetId   String?
+  teamId     String? // untuk menyaring log per tim
+  summary    String
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([teamId, createdAt])
+  @@index([action, createdAt])
 }

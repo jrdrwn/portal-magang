@@ -28,6 +28,7 @@ import {
   shiftMonth,
 } from "@/lib/evaluation";
 import { internshipTypeInfo } from "@/lib/labels";
+import { summariesFor } from "@/lib/calendar";
 
 export const metadata: Metadata = { title: "Evaluasi bulanan" };
 
@@ -56,20 +57,8 @@ export default async function EvaluationsPage({ searchParams }: PageProps<"/admi
     orderBy: { user: { name: "asc" } },
   });
 
-  const counts = regs.length
-    ? await db.attendance.groupBy({
-        by: ["userId", "status"],
-        where: {
-          userId: { in: regs.map((r) => r.userId) },
-          date: { gte: start, lte: end },
-        },
-        _count: { _all: true },
-      })
-    : [];
-  const count = (userId: string, statuses: string[]) =>
-    counts
-      .filter((c) => c.userId === userId && statuses.includes(c.status))
-      .reduce((s, c) => s + c._count._all, 0);
+  const summaries = await summariesFor(regs, start, end);
+  const sumOf = (userId: string) => summaries.get(userId);
 
   const done = regs.filter((r) => r.evaluations.length > 0);
   const avgAll = done.length
@@ -171,8 +160,11 @@ export default async function EvaluationsPage({ searchParams }: PageProps<"/admi
                       <span className="text-xs text-muted">{internshipTypeInfo[r.type].label}</span>
                     </Td>
                     <Td className="text-xs">
-                      <span className="font-semibold">{count(r.userId, ["PRESENT", "LATE"])}</span> hadir ·{" "}
-                      {count(r.userId, ["LATE"])} terlambat · {count(r.userId, ["PERMIT", "SICK"])} izin/sakit
+                      <span className="font-semibold">{(sumOf(r.userId)?.present ?? 0) + (sumOf(r.userId)?.late ?? 0)}</span> hadir ·{" "}
+                      {sumOf(r.userId)?.late ?? 0} terlambat · {(sumOf(r.userId)?.permit ?? 0) + (sumOf(r.userId)?.sick ?? 0)} izin/sakit ·{" "}
+                      <span className={(sumOf(r.userId)?.absent ?? 0) > 0 ? "font-semibold text-[#a0153f]" : undefined}>
+                        {sumOf(r.userId)?.absent ?? 0} alpa
+                      </span>
                     </Td>
                     <Td>
                       {g ? (

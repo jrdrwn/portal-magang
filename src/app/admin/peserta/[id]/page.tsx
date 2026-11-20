@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { DocumentLinks } from "@/components/document-links";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { setUserActive } from "@/actions/admin";
 import { resetPassword } from "@/actions/password-reset";
 import { ActionButton } from "@/components/ui/form";
@@ -12,19 +13,16 @@ import {
   CardTitle,
   EmptyState,
   StatCard,
-  Table,
-  Td,
-  Th,
 } from "@/components/ui/ui";
 import { requireAdmin, teamScope } from "@/lib/auth";
 import { internInTeam } from "@/lib/queries";
+import { attendanceDays } from "@/lib/calendar";
+import { AttendanceDays } from "@/components/attendance-days";
 import { averageScore, grade } from "@/lib/evaluation";
 import { db } from "@/lib/db";
-import { daysBetweenInclusive, formatDate, formatTime } from "@/lib/dates";
-import { formatDistance, mapsUrl } from "@/lib/geo";
+import { daysBetweenInclusive, formatDate, isValidDateKey, keyToDate } from "@/lib/dates";
 import {
   activityLabel,
-  attendanceLabel,
   internshipTypeInfo,
   registrationLabel,
 } from "@/lib/labels";
@@ -34,7 +32,7 @@ export const metadata: Metadata = { title: "Detail peserta" };
 const formatMonthDate = (d: Date) =>
   new Intl.DateTimeFormat("id-ID", { timeZone: "UTC", month: "long", year: "numeric" }).format(d);
 
-export default async function InternDetail({ params }: PageProps<"/admin/peserta/[id]">) {
+export default async function InternDetail({ params, searchParams }: PageProps<"/admin/peserta/[id]">) {
   const admin = await requireAdmin();
   const scope = teamScope(admin);
   const { id } = await params;
@@ -44,9 +42,11 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
     include: {
       profile: true,
       registrations: {
+        where: scope ? { teamId: scope } : {},
         include: {
           team: { select: { name: true } },
           certificate: { select: { id: true, number: true } },
+          documents: { select: { id: true, kind: true, fileName: true, size: true }, orderBy: { kind: "asc" } },
           survey: { select: { id: true } },
         },
         orderBy: { startDate: "desc" },
@@ -60,16 +60,20 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
   });
   if (!user) notFound();
 
-  const [attendances, activities, grouped] = await Promise.all([
-    db.attendance.findMany({ where: { userId: id }, orderBy: { date: "desc" }, take: 60 }),
+  const scopedRegs = user.registrations.filter(
+    (r) => r.status === "APPROVED" && (!scope || r.teamId === scope),
+  );
+  const [days, activities] = await Promise.all([
+    attendanceDays(id, scopedRegs),
     db.activity.findMany({
       where: { userId: id },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       take: 30,
     }),
-    db.attendance.groupBy({ by: ["status"], where: { userId: id }, _count: { _all: true } }),
   ]);
-  const n = (s: string) => grouped.find((g) => g.status === s)?._count._all ?? 0;
+  const sum = days.summary;
+  const sp = await searchParams;
+  const corrected = isValidDateKey(sp.koreksi) ? sp.koreksi : null;
   const p = user.profile;
 
   return (
@@ -122,10 +126,10 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
       </Card>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Hadir" value={n("PRESENT")} tone="lime" />
-        <StatCard label="Terlambat" value={n("LATE")} tone="peach" />
-        <StatCard label="Izin" value={n("PERMIT")} tone="sky" />
-        <StatCard label="Sakit" value={n("SICK")} tone="light" />
+        <StatCard label="Hadir" value={sum.present + sum.late} hint={`${sum.late} terlambat`} tone="lime" />
+        <StatCard label="Izin / sakit" value={sum.permit + sum.sick} hint={`${sum.permit} izin · ${sum.sick} sakit`} tone="sky" />
+        <StatCard label="Alpa" value={sum.absent} hint="hari kerja tanpa catatan" tone="peach" />
+        <StatCard label="Hari kerja" value={sum.workdays} hint={`${sum.holiday} hari libur dilewati`} tone="light" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_1.4fr]">
@@ -174,6 +178,17 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
                         {registrationLabel[r.status].label}
                       </Badge>
                     </div>
+                    <div className="mt-2">
+                      <DocumentLinks docs={r.documents} />
+                    </div>
+                    {r.status === "APPROVED" ? (
+                      <Link
+                        href={`/cetak/laporan/${r.id}`}
+                        className="mt-2 mr-3 inline-block text-xs font-semibold text-brand-700 hover:underline"
+                      >
+                        Laporan magang <ArrowRight className="inline size-3" aria-hidden />
+                      </Link>
+                    ) : null}
                     {r.certificate ? (
                       <Link
                         href={`/cetak/sertifikat/${r.certificate.id}`}
@@ -221,55 +236,13 @@ export default async function InternDetail({ params }: PageProps<"/admin/peserta
           </Card>
 
           <Card>
-            <CardTitle title="Riwayat absensi" hint="60 catatan terakhir" />
-            {attendances.length === 0 ? (
-              <EmptyState title="Belum ada absensi" />
-            ) : (
-              <Table className="max-h-96 overflow-y-auto">
-                  <thead>
-                    <tr>
-                      <Th>Tanggal</Th>
-                      <Th>Status</Th>
-                      <Th>Masuk</Th>
-                      <Th>Pulang</Th>
-                      <Th>Jarak</Th>
-                      <Th>Peta</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attendances.map((a) => (
-                      <tr key={a.id}>
-                        <Td className="font-medium">{formatDate(a.date)}</Td>
-                        <Td>
-                          <Badge tone={attendanceLabel[a.status].tone}>
-                            {attendanceLabel[a.status].label}
-                          </Badge>
-                        </Td>
-                        <Td>{formatTime(a.checkInAt)}</Td>
-                        <Td>{formatTime(a.checkOutAt)}</Td>
-                        <Td>
-                          {a.checkInDistance != null ? formatDistance(a.checkInDistance) : "-"}
-                        </Td>
-                        <Td>
-                          {a.checkInLat != null && a.checkInLng != null ? (
-                            <a
-                              href={mapsUrl(a.checkInLat, a.checkInLng)}
-                              target="_blank"
-                              rel="noreferrer noopener"
-                              aria-label="Buka peta"
-                              className="text-brand-600"
-                            >
-                              <ExternalLink className="size-4" aria-hidden />
-                            </a>
-                          ) : (
-                            "-"
-                          )}
-                        </Td>
-                      </tr>
-                    ))}
-                  </tbody>
-              </Table>
-            )}
+            <CardTitle title="Riwayat absensi" hint="Per hari kerja, termasuk alpa dan libur" />
+            {corrected ? (
+              <p role="status" className="mb-4 rounded-2xl bg-lime/50 px-4 py-3 text-sm font-medium text-[#2d4a00]">
+                Koreksi absensi {formatDate(keyToDate(corrected))} tersimpan.
+              </p>
+            ) : null}
+            <AttendanceDays rows={days.rows} correctBase={`/admin/peserta/${id}/koreksi`} />
           </Card>
 
           <Card>

@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { UsersRound } from "lucide-react";
+import { formatDate } from "@/lib/dates";
 import { getOpenTeams } from "@/lib/queries";
 
 /** Daftar tim yang membuka pendaftaran. Dibaca saat request agar selalu terbaru. */
@@ -41,6 +42,13 @@ export async function OpenTeams({ compact = false }: { compact?: boolean }) {
           <div className="min-w-0">
             <p className="font-semibold">{t.name}</p>
             {t.description ? <p className="mt-0.5 text-sm text-muted">{t.description}</p> : null}
+            {t.regClosesAt || t.quota != null ? (
+              <p className="mt-1.5 text-xs font-semibold text-brand-700">
+                {[t.regClosesAt ? `Tutup ${formatDate(t.regClosesAt)}` : null, t.quota != null ? `Kuota ${t.quota} orang` : null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
           </div>
         </li>
       ))}

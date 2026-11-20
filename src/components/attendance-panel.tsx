@@ -7,6 +7,7 @@ import { checkIn, checkOut } from "@/actions/attendance";
 import type { ActionResult } from "@/lib/action-result";
 import { distanceMeters, formatDistance, mapsUrl } from "@/lib/geo";
 import { FormMessage } from "./ui/form";
+import { SelfieCapture } from "./selfie-capture";
 import { btn } from "./ui/ui";
 
 type Office = {
@@ -61,6 +62,7 @@ export function AttendancePanel({
   office,
   mode,
   blockedReason,
+  requireSelfie = false,
   checkInTime,
   checkOutTime,
 }: {
@@ -68,6 +70,7 @@ export function AttendancePanel({
   /** checkin: belum absen · checkout: sudah masuk · done: selesai · blocked: tidak bisa absen */
   mode: "checkin" | "checkout" | "done" | "blocked";
   blockedReason?: string;
+  requireSelfie?: boolean;
   checkInTime?: string;
   checkOutTime?: string;
 }) {
@@ -78,6 +81,8 @@ export function AttendancePanel({
   const [pending, startTransition] = useTransition();
 
   const tracking = mode === "checkin" || mode === "checkout";
+  const [photo, setPhoto] = useState<Blob | null>(null);
+  const photoMissing = requireSelfie && !photo;
   const supported = useSyncExternalStore(
     () => () => {},
     () => "geolocation" in navigator,
@@ -110,9 +115,14 @@ export function AttendancePanel({
     if (!position) return;
     setResult(null);
     startTransition(async () => {
-      const input = { lat: position.lat, lng: position.lng };
+      const data = new FormData();
+      data.set("lat", String(position.lat));
+      data.set("lng", String(position.lng));
+      if (photo) data.set("photo", new File([photo], "swafoto.jpg", { type: "image/jpeg" }));
       try {
-        setResult(await (mode === "checkin" ? checkIn(input) : checkOut(input)));
+        const res = await (mode === "checkin" ? checkIn(data) : checkOut(data));
+        setResult(res);
+        if (res.ok) setPhoto(null);
       } catch {
         setResult({ ok: false, error: "Terjadi kesalahan. Coba lagi." });
       }
@@ -232,15 +242,17 @@ export function AttendancePanel({
               )}
             </div>
 
+            {requireSelfie ? <SelfieCapture key={mode} onChange={setPhoto} disabled={pending} /> : null}
+
             <button
               type="button"
               onClick={submit}
-              disabled={!position || !inRange || pending}
+              disabled={!position || !inRange || photoMissing || pending}
               className={clsx(
                 btn.base,
                 "w-full py-4 text-base",
                 mode === "checkin" ? "bg-lime text-ink hover:bg-lime/85" : "bg-brand-500 text-white hover:bg-brand-600",
-                inRange && !pending && "pulse-ring",
+                inRange && !photoMissing && !pending && "pulse-ring",
               )}
             >
               {pending ? <Loader2 className="size-5 animate-spin" aria-hidden /> : null}

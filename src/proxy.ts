@@ -29,6 +29,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (matches(pathname, ["/cetak"]) && !session) return redirectTo("/login");
+
   const isAdminPath = matches(pathname, ["/admin"]);
   if (isAdminPath || matches(pathname, INTERN_PATHS)) {
     if (!session) return redirectTo("/login");
@@ -53,5 +55,6 @@ export const config = {
     "/notifikasi/:path*",
     "/profil/:path*",
     "/admin/:path*",
+    "/cetak/:path*",
   ],
 };

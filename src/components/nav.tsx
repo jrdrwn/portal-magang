@@ -3,7 +3,9 @@
 import clsx from "clsx";
 import {
   Award,
+  CalendarOff,
   CalendarRange,
+  History,
   GraduationCap,
   MessageSquareHeart,
   ClipboardList,
@@ -47,7 +49,9 @@ const items = {
     { href: "/admin/aktivitas", label: "Aktivitas", icon: ListChecks },
     { href: "/admin/evaluasi", label: "Evaluasi", icon: Award },
     { href: "/admin/survei", label: "Survei", icon: MessageSquareHeart },
+    { href: "/admin/log", label: "Log admin", icon: History },
     { href: "/admin/tim", label: "Tim", icon: UsersRound, superOnly: true },
+    { href: "/admin/libur", label: "Hari libur", icon: CalendarOff, superOnly: true },
     { href: "/admin/akun", label: "Akun admin", icon: Shield, superOnly: true },
     { href: "/admin/pengaturan", label: "Pengaturan", icon: Settings, superOnly: true },
   ],

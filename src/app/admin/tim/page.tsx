@@ -4,9 +4,38 @@ import { ActionButton, ActionForm, CheckboxField, Field } from "@/components/ui/
 import { Badge, Card, CardTitle, EmptyState, PageHeader } from "@/components/ui/ui";
 import { requireSuperAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { todayDate } from "@/lib/dates";
+import { dateToKey, formatDate, todayDate } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Tim" };
+
+function openState(t: { isOpen: boolean; regOpensAt: Date | null; regClosesAt: Date | null }) {
+  const today = todayDate();
+  if (!t.isOpen) return { label: "Ditutup", tone: "neutral" as const };
+  if (t.regOpensAt && t.regOpensAt > today) return { label: `Dibuka ${formatDate(t.regOpensAt)}`, tone: "info" as const };
+  if (t.regClosesAt && t.regClosesAt < today) return { label: "Lewat jadwal", tone: "warning" as const };
+  return { label: "Pendaftaran dibuka", tone: "success" as const };
+}
+
+function ScheduleFields({ quota, opensAt = "", closesAt = "" }: { quota?: number | null; opensAt?: string; closesAt?: string }) {
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Buka pendaftaran" name="regOpensAt" type="date" defaultValue={opensAt} hint="Kosong = mulai sekarang" />
+        <Field label="Tutup pendaftaran" name="regClosesAt" type="date" defaultValue={closesAt} hint="Kosong = tanpa batas" />
+      </div>
+      <Field
+        label="Kuota peserta"
+        name="quota"
+        type="number"
+        min={1}
+        max={500}
+        inputMode="numeric"
+        defaultValue={quota != null ? String(quota) : ""}
+        hint="Maks. peserta disetujui yang periodenya bersamaan. Kosong = tanpa batas."
+      />
+    </>
+  );
+}
 
 export default async function TeamsPage() {
   await requireSuperAdmin();
@@ -54,11 +83,12 @@ export default async function TeamsPage() {
               maxLength={300}
               placeholder="Tampil ke calon peserta saat memilih tim"
             />
+            <ScheduleFields />
             <CheckboxField
               label="Buka pendaftaran"
               name="isOpen"
               defaultChecked
-              hint="Tim langsung tampil di halaman pendaftaran."
+              hint="Tim tampil di halaman pendaftaran selama dalam jadwal."
             />
           </ActionForm>
         </Card>
@@ -75,13 +105,16 @@ export default async function TeamsPage() {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-lg font-bold">{t.name}</h2>
-                      <Badge tone={t.isOpen ? "success" : "neutral"}>
-                        {t.isOpen ? "Pendaftaran dibuka" : "Ditutup"}
-                      </Badge>
+                      <Badge tone={openState(t).tone}>{openState(t).label}</Badge>
                     </div>
                     {t.description ? (
                       <p className="mt-1 text-sm text-muted">{t.description}</p>
                     ) : null}
+                    <p className="mt-1 text-xs text-muted">
+                      Jadwal: {t.regOpensAt ? formatDate(t.regOpensAt) : "kapan saja"} s.d.{" "}
+                      {t.regClosesAt ? formatDate(t.regClosesAt) : "tanpa batas"} · Kuota:{" "}
+                      {t.quota != null ? `${t.quota} peserta` : "tanpa batas"}
+                    </p>
                   </div>
                   <ActionButton
                     action={setTeamOpen.bind(null, t.id, !t.isOpen)}
@@ -93,7 +126,10 @@ export default async function TeamsPage() {
 
                 <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                   <div className="rounded-2xl bg-lime/50 p-3">
-                    <p className="text-xl font-bold">{n(active, t.id)}</p>
+                    <p className="text-xl font-bold">
+                      {n(active, t.id)}
+                      {t.quota != null ? <span className="text-sm font-semibold text-ink/60">/{t.quota}</span> : null}
+                    </p>
                     <p className="text-xs text-ink/70">Peserta aktif</p>
                   </div>
                   <div className="rounded-2xl bg-peach p-3">
@@ -142,6 +178,11 @@ export default async function TeamsPage() {
                         rows={2}
                         maxLength={300}
                         defaultValue={t.description ?? ""}
+                      />
+                      <ScheduleFields
+                        quota={t.quota}
+                        opensAt={t.regOpensAt ? dateToKey(t.regOpensAt) : ""}
+                        closesAt={t.regClosesAt ? dateToKey(t.regClosesAt) : ""}
                       />
                       <CheckboxField label="Buka pendaftaran" name="isOpen" defaultChecked={t.isOpen} />
                     </ActionForm>

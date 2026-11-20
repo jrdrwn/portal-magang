@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Award, CalendarClock, ClipboardList, ExternalLink } from "lucide-react";
+import { Award, CalendarClock, ClipboardList, ExternalLink, FileText } from "lucide-react";
 import { Badge, ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui/ui";
 import { requireIntern } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -116,6 +116,10 @@ export default async function CertificatesPage() {
                       Isi survei akhir
                     </ButtonLink>
                   ) : null}
+                  <ButtonLink href={`/cetak/laporan/${r.id}`} variant="ghost">
+                    <FileText className="size-4" aria-hidden />
+                    {ended ? "Laporan akhir" : "Laporan sementara"}
+                  </ButtonLink>
                 </div>
               </Card>
             );

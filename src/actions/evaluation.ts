@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { requireAdmin, teamScope } from "@/lib/auth";
 import { notify } from "@/lib/notifications";
@@ -94,6 +95,14 @@ export async function saveEvaluation(
     refId: registrationId,
   });
 
+  const intern = await db.user.findUnique({ where: { id: reg.userId }, select: { name: true } });
+  await audit(admin, "evaluation.save", {
+    summary: `${intern?.name} · ${formatMonth(month)} · rata-rata ${averageScore(scores)}${before ? " (diubah)" : ""}`,
+    targetType: "Registration",
+    targetId: registrationId,
+    teamId: reg.teamId,
+    meta: scores,
+  });
   revalidatePath("/admin", "layout");
   revalidatePath("/evaluasi");
   return success("Evaluasi disimpan.");

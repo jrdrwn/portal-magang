@@ -13,6 +13,7 @@ import {
 } from "@/lib/dates";
 import { attendanceLabel } from "@/lib/labels";
 import { getActiveInterns, internInTeam } from "@/lib/queries";
+import { nonWorkingReason } from "@/lib/calendar";
 import {
   Avatar,
   Badge,
@@ -33,7 +34,7 @@ export default async function AdminHome() {
   const today = todayDate();
   const weekStart = addDays(today, -6);
 
-  const [interns, todays, pendingCount, pendingList, weekRows] = await Promise.all([
+  const [interns, todays, pendingCount, pendingList, weekRows, closed] = await Promise.all([
     getActiveInterns(today, scope),
     db.attendance.findMany({
       where: { date: today, ...(scope ? { user: internInTeam(scope) } : {}) },
@@ -58,12 +59,13 @@ export default async function AdminHome() {
       },
       _count: { _all: true },
     }),
+    nonWorkingReason(today),
   ]);
 
   const activeIds = new Set(interns.map((i) => i.id));
   const todaysActive = todays.filter((t) => activeIds.has(t.userId));
   const attended = new Set(todaysActive.map((t) => t.userId));
-  const notYet = interns.filter((i) => !attended.has(i.id));
+  const notYet = closed ? [] : interns.filter((i) => !attended.has(i.id));
   const count = (s: string) => todaysActive.filter((t) => t.status === s).length;
   const present = count("PRESENT") + count("LATE");
   const away = count("PERMIT") + count("SICK");
@@ -211,8 +213,10 @@ export default async function AdminHome() {
           </Card>
 
           <Card>
-            <CardTitle title="Belum absen hari ini" hint={`${notYet.length} peserta`} />
-            {notYet.length === 0 ? (
+            <CardTitle title="Belum absen hari ini" hint={closed ?? `${notYet.length} peserta`} />
+            {closed ? (
+              <EmptyState title="Hari ini tidak ada absen" description={closed} />
+            ) : notYet.length === 0 ? (
               <EmptyState title="Semua peserta aktif sudah tercatat" />
             ) : (
               <ul className="space-y-2">

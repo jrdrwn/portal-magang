@@ -10,7 +10,7 @@ import {
   dateToKey,
 } from "@/lib/dates";
 import { attendanceLabel, internshipTypeInfo } from "@/lib/labels";
-import { internInTeam } from "@/lib/queries";
+import { dailyStatuses, dayStatusLabel, getCalendar } from "@/lib/calendar";
 
 const MAX_DAYS = 93;
 
@@ -35,45 +35,62 @@ export async function GET(request: NextRequest) {
     return new Response(`Rentang maksimal ${MAX_DAYS} hari`, { status: 400 });
   }
 
-  const rows = await db.attendance.findMany({
-    where: { date: { gte: from, lte: to }, ...(scope ? { user: internInTeam(scope) } : {}) },
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-          registrations: {
-            where: { status: "APPROVED", ...(scope ? { teamId: scope } : {}) },
-            select: {
-              startDate: true,
-              endDate: true,
-              type: true,
-              team: { select: { name: true } },
-            },
-          },
-        },
-      },
+  // Semua periode magang disetujui yang bersinggungan dengan rentang ekspor.
+  const regs = await db.registration.findMany({
+    where: {
+      status: "APPROVED",
+      startDate: { lte: to },
+      endDate: { gte: from },
+      ...(scope ? { teamId: scope } : {}),
     },
-    orderBy: [{ date: "asc" }, { user: { name: "asc" } }],
+    include: { user: { select: { id: true, name: true, email: true } }, team: { select: { name: true } } },
   });
+  const [records, cal] = await Promise.all([
+    db.attendance.findMany({
+      where: { userId: { in: regs.map((r) => r.userId) }, date: { gte: from, lte: to } },
+      include: { correctedBy: { select: { name: true } } },
+    }),
+    getCalendar(from, to),
+  ]);
+  const recordOf = new Map(records.map((r) => [`${r.userId}|${dateToKey(r.date)}`, r]));
+
+  const lines: { key: string; name: string; cells: unknown[] }[] = [];
+  for (const reg of regs) {
+    const start = reg.startDate > from ? reg.startDate : from;
+    const end = reg.endDate < to ? reg.endDate : to;
+    const own = records.filter((r) => r.userId === reg.userId);
+    for (const day of dailyStatuses(start, end, own, cal)) {
+      if (day.status === "OFF") continue;
+      const k = dateToKey(day.date);
+      const a = recordOf.get(`${reg.userId}|${k}`);
+      const status =
+        day.status in attendanceLabel
+          ? attendanceLabel[day.status as keyof typeof attendanceLabel].label
+          : dayStatusLabel[day.status as keyof typeof dayStatusLabel];
+      lines.push({
+        key: k,
+        name: reg.user.name,
+        cells: [
+          k,
+          reg.user.name,
+          reg.user.email,
+          reg.team.name,
+          internshipTypeInfo[reg.type].label,
+          status,
+          a?.checkInAt ? formatTime(a.checkInAt) : "",
+          a?.checkOutAt ? formatTime(a.checkOutAt) : "",
+          a?.checkInDistance != null ? Math.round(a.checkInDistance) : "",
+          day.holidayName ?? a?.note ?? "",
+          a?.correctedAt ? `Ya (${a.correctedBy?.name ?? "admin"}: ${a.correctionReason ?? ""})` : "",
+        ],
+      });
+    }
+  }
+  lines.sort((x, y) => x.key.localeCompare(y.key) || x.name.localeCompare(y.name));
 
   const csv = toCsv(
-    ["Tanggal", "Nama", "Email", "Tim", "Jenis magang", "Status", "Masuk", "Pulang", "Jarak masuk (m)", "Keterangan"],
-    rows.map((a) => {
-      const reg = a.user.registrations.find((r) => r.startDate <= a.date && r.endDate >= a.date);
-      return [
-        dateToKey(a.date),
-        a.user.name,
-        a.user.email,
-        reg?.team.name ?? "",
-        reg ? internshipTypeInfo[reg.type].label : "",
-        attendanceLabel[a.status].label,
-        a.checkInAt ? formatTime(a.checkInAt) : "",
-        a.checkOutAt ? formatTime(a.checkOutAt) : "",
-        a.checkInDistance != null ? Math.round(a.checkInDistance) : "",
-        a.note ?? "",
-      ];
-    }),
+    ["Tanggal", "Nama", "Email", "Tim", "Jenis magang", "Status", "Masuk", "Pulang", "Jarak masuk (m)", "Keterangan", "Dikoreksi"],
+    lines.map((l) => l.cells),
   );
   return csvResponse(`absensi_${fromKey}_${toKey}.csv`, csv);
 }

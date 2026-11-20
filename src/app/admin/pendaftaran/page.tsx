@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DocumentLinks } from "@/components/document-links";
 import Link from "next/link";
 import clsx from "clsx";
 import { ReviewControls } from "@/components/review-controls";
@@ -13,6 +14,7 @@ import { requireAdmin, teamScope } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { daysBetweenInclusive, formatDate } from "@/lib/dates";
 import { internshipTypeInfo, registrationLabel } from "@/lib/labels";
+import { quotaUsed } from "@/lib/queries";
 import type { RegistrationStatus } from "@/generated/prisma/enums";
 
 export const metadata: Metadata = { title: "Pendaftaran" };
@@ -39,7 +41,8 @@ export default async function AdminRegistrations({
       where: current === "ALL" ? regScope : { status: current, ...regScope },
       include: {
         user: { select: { id: true, name: true, email: true, profile: true } },
-        team: { select: { name: true } },
+        team: { select: { name: true, quota: true } },
+        documents: { select: { id: true, kind: true, fileName: true, size: true }, orderBy: { kind: "asc" } },
       },
       orderBy: { createdAt: current === "PENDING" ? "asc" : "desc" },
       take: 100,
@@ -50,6 +53,13 @@ export default async function AdminRegistrations({
       _count: { _all: true },
     }),
   ]);
+  const usage = new Map(
+    await Promise.all(
+      rows
+        .filter((r) => r.status === "PENDING" && r.team.quota != null)
+        .map(async (r) => [r.id, await quotaUsed(r.teamId, r.startDate, r.endDate, r.id)] as const),
+    ),
+  );
   const counts = Object.fromEntries(grouped.map((g) => [g.status, g._count._all]));
   const total = grouped.reduce((s, g) => s + g._count._all, 0);
 
@@ -132,7 +142,19 @@ export default async function AdminRegistrations({
                 </div>
               </div>
 
+              {usage.has(r.id) ? (
+                <p
+                  className={`rounded-2xl px-3 py-2 text-xs font-semibold ${
+                    usage.get(r.id)! >= r.team.quota! ? "bg-rose text-[#a0153f]" : "bg-sky text-[#1c4a8a]"
+                  }`}
+                >
+                  Kuota tim pada periode ini: {usage.get(r.id)}/{r.team.quota} terisi
+                  {usage.get(r.id)! >= r.team.quota! ? " (penuh)" : ""}
+                </p>
+              ) : null}
+
               <p className="whitespace-pre-line text-sm text-muted">{r.motivation}</p>
+              <DocumentLinks docs={r.documents} />
 
               {r.reviewNote ? (
                 <p className="rounded-2xl bg-brand-50 p-3 text-sm">

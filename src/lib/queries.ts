@@ -100,11 +100,35 @@ export async function getActiveInterns(on: Date, teamId: string | null = null) {
     .map((r) => ({ ...r.user, team: r.team.name }));
 }
 
+/** Filter tim yang menerima pendaftaran pada tanggal `on`: dibuka & dalam jadwal (jika diatur). */
+export function teamAcceptingWhere(on: Date = todayDate()) {
+  return {
+    isOpen: true,
+    AND: [
+      { OR: [{ regOpensAt: null }, { regOpensAt: { lte: on } }] },
+      { OR: [{ regClosesAt: null }, { regClosesAt: { gte: on } }] },
+    ],
+  };
+}
+
 /** Tim yang sedang membuka pendaftaran. */
 export function getOpenTeams() {
   return db.team.findMany({
-    where: { isOpen: true },
-    select: { id: true, name: true, description: true },
+    where: teamAcceptingWhere(),
+    select: { id: true, name: true, description: true, quota: true, regClosesAt: true },
     orderBy: { name: "asc" },
+  });
+}
+
+/** Jumlah peserta disetujui di tim yang periodenya bertumpang tindih dengan [start, end]. */
+export function quotaUsed(teamId: string, start: Date, end: Date, excludeId?: string) {
+  return db.registration.count({
+    where: {
+      teamId,
+      status: "APPROVED",
+      startDate: { lte: end },
+      endDate: { gte: start },
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
   });
 }

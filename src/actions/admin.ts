@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { requireAdmin, requireSuperAdmin, teamScope } from "@/lib/auth";
 import { notify } from "@/lib/notifications";
+import { quotaUsed } from "@/lib/queries";
 import { isValidClock, parseClock } from "@/lib/dates";
 import {
   failure,
@@ -49,6 +51,13 @@ export async function reviewRegistration(
   }
 
   if (decision === "APPROVED") {
+    const team = await db.team.findUnique({ where: { id: reg.teamId }, select: { name: true, quota: true } });
+    if (team?.quota != null) {
+      const used = await quotaUsed(reg.teamId, reg.startDate, reg.endDate, reg.id);
+      if (used >= team.quota) {
+        return failure(`Kuota tim ${team.name} penuh untuk periode ini (${used}/${team.quota} peserta disetujui).`);
+      }
+    }
     const overlap = await db.registration.findFirst({
       where: {
         userId: reg.userId,
@@ -73,6 +82,13 @@ export async function reviewRegistration(
       reviewedAt: decision === "PENDING" ? null : new Date(),
     },
     include: { team: { select: { name: true } } },
+  });
+  const intern = await db.user.findUnique({ where: { id: updated.userId }, select: { name: true } });
+  await audit(admin, decision === "APPROVED" ? "registration.approve" : decision === "REJECTED" ? "registration.reject" : "registration.reopen", {
+    summary: `${intern?.name ?? "Peserta"} · tim ${updated.team.name}${note ? ` · catatan: ${note}` : ""}`,
+    targetType: "Registration",
+    targetId: updated.id,
+    teamId: updated.teamId,
   });
   if (decision !== "PENDING") {
     await notify([updated.userId], {
@@ -112,6 +128,12 @@ export async function setUserActive(
     data: { isActive },
   });
   if (res.count === 0) return failure("Peserta tidak ditemukan.");
+  const target = await db.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+  await audit(admin, isActive ? "user.activate" : "user.deactivate", {
+    summary: `${target?.name} (${target?.email})`,
+    targetType: "User",
+    targetId: userId,
+  });
   revalidatePath("/admin", "layout");
   return success(isActive ? "Akun diaktifkan." : "Akun dinonaktifkan.");
 }
@@ -132,6 +154,7 @@ const officeSchema = z
     workStart: z.string().refine(isValidClock, "Format jam HH:mm"),
     lateAfter: z.string().refine(isValidClock, "Format jam HH:mm"),
     workEnd: z.string().refine(isValidClock, "Format jam HH:mm"),
+    requireSelfie: z.boolean(),
   })
   .refine((v) => parseClock(v.lateAfter) >= parseClock(v.workStart), {
     path: ["lateAfter"],
@@ -139,7 +162,7 @@ const officeSchema = z
   });
 
 export async function updateOffice(formData: FormData): Promise<ActionResult> {
-  await requireSuperAdmin();
+  const admin = await requireSuperAdmin();
 
   const parsed = officeSchema.safeParse({
     name: str(formData, "name"),
@@ -149,6 +172,7 @@ export async function updateOffice(formData: FormData): Promise<ActionResult> {
     workStart: str(formData, "workStart"),
     lateAfter: str(formData, "lateAfter"),
     workEnd: str(formData, "workEnd"),
+    requireSelfie: formData.get("requireSelfie") === "on",
   });
   if (!parsed.success) return validationFailure(parsed.error);
 
@@ -158,6 +182,10 @@ export async function updateOffice(formData: FormData): Promise<ActionResult> {
     create: { id: 1, ...parsed.data },
   });
   revalidatePath("/admin", "layout");
+  await audit(admin, "settings.office", {
+    summary: `${parsed.data.name} · radius ${parsed.data.radiusMeters} m · masuk ${parsed.data.workStart}, terlambat > ${parsed.data.lateAfter} · swafoto ${parsed.data.requireSelfie ? "wajib" : "opsional"}`,
+    meta: parsed.data,
+  });
   revalidatePath("/absensi");
   return success("Pengaturan lokasi & jam kerja disimpan.");
 }
@@ -170,7 +198,7 @@ const certSchema = z.object({
 });
 
 export async function updateCertificateSettings(formData: FormData): Promise<ActionResult> {
-  await requireSuperAdmin();
+  const admin = await requireSuperAdmin();
   const parsed = certSchema.safeParse({
     orgName: str(formData, "orgName"),
     certCity: str(formData, "certCity"),
@@ -183,6 +211,7 @@ export async function updateCertificateSettings(formData: FormData): Promise<Act
     update: parsed.data,
     create: { id: 1, ...parsed.data },
   });
+  await audit(admin, "settings.certificate", { summary: `${parsed.data.orgName} · ${parsed.data.signerTitle}`, meta: parsed.data });
   revalidatePath("/admin/pengaturan");
   return success("Pengaturan sertifikat disimpan.");
 }

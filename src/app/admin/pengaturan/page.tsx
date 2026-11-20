@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ExternalLink } from "lucide-react";
 import { updateCertificateSettings, updateOffice } from "@/actions/admin";
 import { OfficeMapPicker } from "@/components/office-map-picker";
-import { ActionForm, Field } from "@/components/ui/form";
+import { ActionForm, CheckboxField, Field } from "@/components/ui/form";
 import { Card, CardTitle, PageHeader } from "@/components/ui/ui";
 import { requireSuperAdmin } from "@/lib/auth";
 import { mapsUrl } from "@/lib/geo";
@@ -41,6 +41,12 @@ export default async function SettingsPage() {
               />
               <Field label="Jam pulang" name="workEnd" type="time" defaultValue={o.workEnd} />
             </div>
+            <CheckboxField
+              label="Wajib swafoto saat absen masuk & pulang"
+              name="requireSelfie"
+              defaultChecked={o.requireSelfie}
+              hint="Foto disimpan bersama data absen dan bisa dilihat admin tim."
+            />
           </ActionForm>
         </Card>
 
