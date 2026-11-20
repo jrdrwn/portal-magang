@@ -137,10 +137,12 @@ export function ShellFrame({
 export function AppShell({
   user,
   variant,
+  banner,
   children,
 }: {
   user: CurrentUser;
   variant: "intern" | "admin";
+  banner?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -164,6 +166,7 @@ export function AppShell({
       account={
         <AccountCard user={user} href={variant === "admin" ? "/admin/akun-saya" : "/profil"} />
       }
+      banner={banner}
     >
       {children}
     </ShellFrame>

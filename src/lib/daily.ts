@@ -4,7 +4,7 @@ import { nonWorkingReason } from "./calendar";
 import { formatTime, minutesOfDay, parseClock, todayDate } from "./dates";
 import { getActiveRegistration, getOfficeSetting } from "./queries";
 
-export type StepState = "done" | "current" | "upcoming" | "late" | "skipped";
+import { clock, type StepState } from "./steps";
 
 export type DailyStep = {
   key: "checkin" | "activity" | "checkout";
@@ -25,7 +25,6 @@ export type DailyPlan =
       next: { label: string; href: string; hint: string } | null;
     };
 
-const clock = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
 /** Langkah harian peserta untuk hari ini (WIB). `now` bisa diisi untuk pengujian. */
 export async function getDailyPlan(userId: string, now: Date = new Date()): Promise<DailyPlan> {

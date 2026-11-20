@@ -32,12 +32,15 @@ export function ReminderSettings({
   showDailyToggle,
   workStart,
   workEnd,
+  dailyDescription,
 }: {
   vapidKey: string | null;
   remindersEnabled: boolean;
   showDailyToggle: boolean;
   workStart: string;
   workEnd: string;
+  /** Pengganti keterangan pengingat harian (dipakai halaman admin). */
+  dailyDescription?: string;
 }) {
   const [device, setDevice] = useState<DeviceState>("loading");
   const [daily, setDaily] = useState(remindersEnabled);
@@ -132,8 +135,8 @@ export function ReminderSettings({
           <span>
             <span className="block text-sm font-semibold">Pengingat harian</span>
             <span className="block text-xs text-muted">
-              Absen masuk (menjelang {workStart}), catat aktivitas, dan absen pulang (setelah {workEnd}). Tidak dikirim di
-              hari libur atau saat izin/sakit.
+              {dailyDescription ??
+                `Absen masuk (menjelang ${workStart}), catat aktivitas, dan absen pulang (setelah ${workEnd}). Tidak dikirim di hari libur atau saat izin/sakit.`}
             </span>
           </span>
           <input

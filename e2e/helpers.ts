@@ -32,6 +32,7 @@ export async function resetDemoAccounts() {
     `UPDATE "User" SET "passwordHash"=$1, "passwordChangedAt"=NULL, "isActive"=true WHERE email LIKE '%@demo.local'`,
     [bcrypt.hashSync(DEMO_PASSWORD, 10)],
   );
+  await sql(`UPDATE "User" SET reminders=true`);
   await sql(`DELETE FROM "AuthAttempt"`);
 }
 

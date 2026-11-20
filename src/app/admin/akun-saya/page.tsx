@@ -3,6 +3,7 @@ import { changePassword, updateAccountName } from "@/actions/profile";
 import { ActionForm, Field } from "@/components/ui/form";
 import { Avatar, Badge, Card, CardTitle, PageHeader } from "@/components/ui/ui";
 import { requireAdmin } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { ReminderSettings } from "@/components/reminder-settings";
 import { vapidPublicKey } from "@/lib/push";
 import { roleLabel } from "@/lib/labels";
@@ -11,6 +12,7 @@ export const metadata: Metadata = { title: "Akun saya" };
 
 export default async function MyAccountPage() {
   const user = await requireAdmin();
+  const account = await db.user.findUnique({ where: { id: user.id }, select: { reminders: true } });
 
   return (
     <>
@@ -52,8 +54,15 @@ export default async function MyAccountPage() {
         </Card>
 
         <Card className="h-fit xl:col-span-2 xl:col-start-2">
-          <CardTitle title="Notifikasi" hint="Kabar pendaftaran baru dan laporan izin/sakit dari peserta tim Anda." />
-          <ReminderSettings vapidKey={vapidPublicKey()} remindersEnabled={false} showDailyToggle={false} workStart="" workEnd="" />
+          <CardTitle title="Pengingat & notifikasi" hint="Kabar pendaftaran baru, laporan izin/sakit, dan pengingat harian." />
+          <ReminderSettings
+            vapidKey={vapidPublicKey()}
+            remindersEnabled={account?.reminders ?? true}
+            showDailyToggle
+            workStart=""
+            workEnd=""
+            dailyDescription="Pendaftaran menunggu, peserta yang belum absen 30 menit setelah batas terlambat, dan evaluasi bulanan yang belum diisi (akhir & awal bulan)."
+          />
         </Card>
       </div>
     </>

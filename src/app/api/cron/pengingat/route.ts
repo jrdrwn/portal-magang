@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { runDailyReminders } from "@/lib/reminders";
+import { runAdminReminders, runDailyReminders } from "@/lib/reminders";
 
 /**
  * Pengingat harian terjadwal. Panggil setiap 10–15 menit di jam kerja:
@@ -21,6 +21,9 @@ export async function GET(request: Request) {
   if (!authorized(request.headers.get("authorization"))) {
     return Response.json({ error: "Tidak diizinkan" }, { status: 401 });
   }
-  const result = await runDailyReminders();
-  return Response.json({ ok: true, ...result }, { headers: { "Cache-Control": "no-store" } });
+  const [peserta, admin] = await Promise.all([runDailyReminders(), runAdminReminders()]);
+  return Response.json(
+    { ok: true, checked: peserta.checked + admin.checked, sent: peserta.sent + admin.sent, peserta, admin },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

@@ -7,6 +7,8 @@ test("Combobox, notifikasi, sticky, survei & sertifikat", async ({ browser }) =>
   await resetDemoAccounts();
   await sql(`DELETE FROM "User" WHERE email='eka@test.local'`);
   await sql(`DELETE FROM "Notification"`);
+  // Suite ini menguji notifikasi kejadian; pengingat harian (bergantung jam) dimatikan agar hitungan lonceng pasti.
+  await sql(`UPDATE "User" SET reminders=false`);
   await sql(`DELETE FROM "Certificate" WHERE "registrationId" IN (SELECT r.id FROM "Registration" r JOIN "User" u ON u.id=r."userId" WHERE u.email='dimas@demo.local')`);
   await sql(`DELETE FROM "SurveyResponse" WHERE "userId" IN (SELECT id FROM "User" WHERE email='dimas@demo.local')`);
   await sql(`DELETE FROM "Attendance" WHERE "userId" IN (SELECT id FROM "User" WHERE email='salsa@demo.local') AND date=CURRENT_DATE`);
