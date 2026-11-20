@@ -15,6 +15,9 @@ Next.js 16 (App Router, Cache Components) + Prisma 7 + PostgreSQL + Tailwind CSS
 - Evaluasi bulanan: melihat nilai per aspek dan catatan dari admin tim
 - Sertifikat: setelah periode magang berakhir, isi survei akhir → sertifikat A4 terbit (cetak / simpan PDF) dengan nomor, QR, dan halaman verifikasi publik `/verifikasi/<kode>`
 - Notifikasi dalam aplikasi (ikon lonceng): pendaftaran disetujui/ditolak, evaluasi baru, pengingat survei, sertifikat terbit
+- **Langkah hari ini** di atas setiap halaman: absen masuk → catat aktivitas → absen pulang, dengan tombol ke langkah berikutnya
+- **Pengingat harian** (bisa dimatikan di Profil): absen masuk 15 menit menjelang jam masuk, catat aktivitas 1 jam sebelum jam pulang, absen pulang 15 menit setelah jam pulang. Muncul di lonceng dan sebagai notifikasi push di HP/laptop yang diaktifkan
+- Navigasi HP berisi fitur harian: Beranda, Aktivitas, **Absen** (tombol tengah), Notifikasi, Menu
 - Profil dan ganti password (kampus & jurusan dengan saran otomatis)
 
 **Admin utama** (`SUPER_ADMIN`)
@@ -62,6 +65,21 @@ E2E_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/magang_test" npm
 ```
 
 `E2E_SKIP_BUILD=1` melewati `next build` kalau sudah build. CI (GitHub Actions, `.github/workflows/e2e.yml`) menjalankan typecheck, lint, dan semua tes di setiap PR.
+
+## Pengingat & notifikasi push
+
+1. Buat kunci VAPID: `npx web-push generate-vapid-keys`, lalu isi `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, dan `VAPID_SUBJECT` (mis. `mailto:admin@kantor.id`) di environment server.
+2. Isi `CRON_SECRET` dengan string acak panjang.
+3. Jadwalkan pemanggilan endpoint pengingat **setiap 10–15 menit** di jam kerja. Endpoint sendiri yang menentukan siapa perlu diingatkan, dan setiap pengingat hanya dikirim sekali per hari:
+   ```bash
+   curl -H "Authorization: Bearer $CRON_SECRET" https://domain-anda/api/cron/pengingat
+   ```
+   Pilihan penjadwal:
+   - **GitHub Actions**: sudah ada `.github/workflows/pengingat.yml` (setiap 15 menit, 06:45–19:59 WIB). Isi secret repo `APP_URL` dan `CRON_SECRET`. Jadwal GitHub bisa terlambat beberapa menit.
+   - **VPS**: `*/10 6-19 * * * curl -fsS -H "Authorization: Bearer RAHASIA" https://domain-anda/api/cron/pengingat`
+   - Layanan seperti cron-job.org, atau Vercel Cron (paket yang mendukung jadwal per menit).
+
+Tanpa VAPID, pengingat tetap muncul di ikon lonceng saat aplikasi dibuka. Push butuh HTTPS. Di iPhone/iPad, push hanya bisa setelah portal ditambahkan ke Layar Utama (iOS 16.4+).
 
 ## Penyimpanan file
 
