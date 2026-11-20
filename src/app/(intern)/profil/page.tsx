@@ -3,6 +3,9 @@ import { changePassword, updateProfile } from "@/actions/profile";
 import { ActionForm, ComboboxField, Field } from "@/components/ui/form";
 import { Avatar, Card, CardTitle, PageHeader } from "@/components/ui/ui";
 import { requireIntern } from "@/lib/auth";
+import { ReminderSettings } from "@/components/reminder-settings";
+import { vapidPublicKey } from "@/lib/push";
+import { getOfficeSetting } from "@/lib/queries";
 import { db } from "@/lib/db";
 import { dateToKey, formatDate } from "@/lib/dates";
 
@@ -15,6 +18,7 @@ export default async function ProfilePage() {
     include: { profile: true },
   });
   const p = user.profile;
+  const office = await getOfficeSetting();
 
   const [instRows, majorRows] = await Promise.all([
     db.profile.findMany({
@@ -51,6 +55,17 @@ export default async function ProfilePage() {
             <p className="mt-4 text-xs text-muted">
               Bergabung {formatDate(user.createdAt)}
             </p>
+          </Card>
+
+          <Card>
+            <CardTitle title="Pengingat & notifikasi" />
+            <ReminderSettings
+              vapidKey={vapidPublicKey()}
+              remindersEnabled={user.reminders}
+              showDailyToggle
+              workStart={office.workStart}
+              workEnd={office.workEnd}
+            />
           </Card>
 
           <Card>

@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "./db";
+import { pushToUsers } from "./push";
 import { todayDate } from "./dates";
 import type { NotificationType } from "@/generated/prisma/enums";
 
@@ -11,14 +12,28 @@ type NotificationInput = {
   refId?: string;
 };
 
-/** Kirim notifikasi ke beberapa user. Gagal kirim tidak boleh menggagalkan aksi utama. */
-export async function notify(userIds: string[], n: NotificationInput) {
+/**
+ * Kirim notifikasi ke beberapa user: di aplikasi + push ke perangkat yang terdaftar.
+ * Gagal kirim tidak boleh menggagalkan aksi utama.
+ */
+export async function notify(
+  userIds: string[],
+  n: NotificationInput,
+  opts: { push?: boolean; tag?: string } = {},
+) {
   const ids = [...new Set(userIds)];
   if (ids.length === 0) return;
   try {
     await db.notification.createMany({ data: ids.map((userId) => ({ userId, ...n })) });
   } catch (err) {
     console.error("Gagal membuat notifikasi", n.type, err);
+    return;
+  }
+  if (opts.push === false) return;
+  try {
+    await pushToUsers(ids, { title: n.title, body: n.body, url: n.href, tag: opts.tag });
+  } catch (err) {
+    console.error("Gagal mengirim push", n.type, err);
   }
 }
 

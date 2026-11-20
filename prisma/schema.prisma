@@ -45,6 +45,8 @@ model User {
   isActive          Boolean   @default(true)
   // Sesi yang dibuat sebelum waktu ini ditolak (setelah ganti/reset password).
   passwordChangedAt DateTime?
+  // Pengingat harian (notifikasi di aplikasi + push ke perangkat terdaftar)
+  reminders         Boolean   @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -52,16 +54,18 @@ model User {
   teamId String?
   team   Team?   @relation("TeamAdmins", fields: [teamId], references: [id], onDelete: SetNull)
 
-  profile       Profile?
-  registrations Registration[]
-  attendances   Attendance[]     @relation("AttendanceIntern")
-  activities    Activity[]
-  evaluations   Evaluation[]     @relation("EvaluationIntern")
-  evaluationsBy Evaluation[]     @relation("EvaluationEvaluator")
-  notifications Notification[]
-  surveys       SurveyResponse[]
-  auditLogs     AuditLog[]
-  corrections   Attendance[]     @relation("AttendanceCorrector")
+  profile           Profile?
+  registrations     Registration[]
+  attendances       Attendance[]       @relation("AttendanceIntern")
+  activities        Activity[]
+  evaluations       Evaluation[]       @relation("EvaluationIntern")
+  evaluationsBy     Evaluation[]       @relation("EvaluationEvaluator")
+  notifications     Notification[]
+  surveys           SurveyResponse[]
+  auditLogs         AuditLog[]
+  pushSubscriptions PushSubscription[]
+  remindersSent     ReminderSent[]
+  corrections       Attendance[]       @relation("AttendanceCorrector")
 
   @@index([teamId])
 }
@@ -251,6 +255,7 @@ enum NotificationType {
   SURVEY_REMINDER
   CERTIFICATE_ISSUED
   ATTENDANCE_CORRECTED
+  DAILY_REMINDER
 }
 
 model Notification {
@@ -352,4 +357,32 @@ model AuditLog {
   @@index([actorId, createdAt])
   @@index([teamId, createdAt])
   @@index([action, createdAt])
+}
+
+// Langganan Web Push per perangkat/browser.
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Penanda pengingat yang sudah dikirim (kunci unik mencegah pengingat ganda saat permintaan bersamaan).
+model ReminderSent {
+  userId    String
+  key       String // mis. harian:2026-11-20:checkin
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, key])
+  @@index([createdAt])
 }

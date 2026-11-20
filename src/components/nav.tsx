@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import {
   Award,
+  Bell,
   CalendarOff,
   CalendarRange,
   ClipboardList,
@@ -31,20 +32,22 @@ type Item = {
   icon: LucideIcon;
   exact?: boolean;
   superOnly?: boolean;
-  /** Tampil langsung di navigasi bawah (HP). */
-  pinned?: boolean;
+  /** Urutan di navigasi bawah HP (fitur harian). Tanpa nilai = hanya di lembar Menu. */
+  pinned?: number;
+  /** Tombol utama yang ditonjolkan di tengah navigasi bawah. */
+  primary?: boolean;
 };
 
 type Group = { label?: string; items: Item[] };
 
 const groups = {
   intern: [
-    { items: [{ href: "/dashboard", label: "Beranda", icon: LayoutDashboard, pinned: true }] },
+    { items: [{ href: "/dashboard", label: "Beranda", icon: LayoutDashboard, pinned: 1 }] },
     {
       label: "Kehadiran",
       items: [
-        { href: "/absensi", label: "Absensi", icon: MapPin, pinned: true },
-        { href: "/aktivitas", label: "Aktivitas", icon: ListChecks, pinned: true },
+        { href: "/absensi", label: "Absensi", icon: MapPin, pinned: 3, primary: true },
+        { href: "/aktivitas", label: "Aktivitas", icon: ListChecks, pinned: 2 },
       ],
     },
     {
@@ -52,31 +55,37 @@ const groups = {
       items: [
         { href: "/pendaftaran", label: "Pendaftaran", icon: CalendarRange },
         { href: "/evaluasi", label: "Evaluasi", icon: Award },
-        { href: "/sertifikat", label: "Sertifikat", icon: GraduationCap, pinned: true },
+        { href: "/sertifikat", label: "Sertifikat", icon: GraduationCap },
       ],
     },
-    { label: "Akun", items: [{ href: "/profil", label: "Profil", icon: UserRound }] },
+    {
+      label: "Akun",
+      items: [
+        { href: "/notifikasi", label: "Notifikasi", icon: Bell, pinned: 4 },
+        { href: "/profil", label: "Profil", icon: UserRound },
+      ],
+    },
   ],
   admin: [
-    { items: [{ href: "/admin", label: "Ringkasan", icon: LayoutDashboard, exact: true, pinned: true }] },
+    { items: [{ href: "/admin", label: "Ringkasan", icon: LayoutDashboard, exact: true, pinned: 1 }] },
     {
       label: "Peserta",
       items: [
-        { href: "/admin/pendaftaran", label: "Pendaftaran", icon: ClipboardList, pinned: true },
+        { href: "/admin/pendaftaran", label: "Pendaftaran", icon: ClipboardList, pinned: 4 },
         { href: "/admin/peserta", label: "Peserta", icon: Users },
       ],
     },
     {
       label: "Kehadiran",
       items: [
-        { href: "/admin/absensi", label: "Absensi", icon: MapPin, pinned: true },
-        { href: "/admin/aktivitas", label: "Aktivitas", icon: ListChecks },
+        { href: "/admin/absensi", label: "Absensi", icon: MapPin, pinned: 2 },
+        { href: "/admin/aktivitas", label: "Aktivitas", icon: ListChecks, pinned: 3 },
       ],
     },
     {
       label: "Penilaian",
       items: [
-        { href: "/admin/evaluasi", label: "Evaluasi", icon: Award, pinned: true },
+        { href: "/admin/evaluasi", label: "Evaluasi", icon: Award },
         { href: "/admin/survei", label: "Survei", icon: MessageSquareHeart },
       ],
     },
@@ -177,6 +186,25 @@ export function SideNav(props: NavProps) {
 
 function TabLink({ item, active }: { item: Item; active: boolean }) {
   const Icon = item.icon;
+  if (item.primary) {
+    return (
+      <Link
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        className="flex min-w-0 flex-1 flex-col items-center gap-1 px-1 text-[11px] font-semibold"
+      >
+        <span
+          className={clsx(
+            "-mt-6 grid size-14 place-items-center rounded-full shadow-lg ring-4 ring-surface transition",
+            active ? "bg-ink text-white shadow-ink/30" : "bg-brand-600 text-white shadow-brand-600/30",
+          )}
+        >
+          <Icon className="size-6" aria-hidden />
+        </span>
+        <span className={clsx("max-w-full truncate", active ? "text-ink" : "text-brand-700")}>{item.label}</span>
+      </Link>
+    );
+  }
   return (
     <Link
       href={item.href}
@@ -211,7 +239,7 @@ function MenuButtonState({ pinned, all }: { pinned: Item[]; all: Item[] }) {
 export function BottomNav(props: NavProps) {
   const list = visibleGroups(props);
   const all = list.flatMap((g) => g.items);
-  const pinned = all.filter((i) => i.pinned).slice(0, 4);
+  const pinned = all.filter((i) => i.pinned).sort((a, b) => a.pinned! - b.pinned!).slice(0, 4);
   const dialog = useRef<HTMLDialogElement>(null);
   const close = () => dialog.current?.close();
 

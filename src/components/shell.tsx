@@ -60,12 +60,15 @@ export function ShellFrame({
   superAdmin = false,
   badge,
   account,
+  banner,
   children,
 }: {
   variant: "intern" | "admin";
   superAdmin?: boolean;
   badge?: ReactNode;
   account: ReactNode;
+  /** Tampil di atas konten setiap halaman (mis. langkah hari ini). */
+  banner?: ReactNode;
   children: ReactNode;
 }) {
   const notificationsHref = variant === "admin" ? "/admin/notifikasi" : "/notifikasi";
@@ -122,6 +125,7 @@ export function ShellFrame({
           </form>
           </div>
         </header>
+        {banner}
         <main id="konten">{children}</main>
       </div>
 

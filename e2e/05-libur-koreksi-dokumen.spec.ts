@@ -83,7 +83,7 @@ test("Hari libur & alpa, koreksi absensi, kuota & jadwal, dokumen, swafoto, lapo
     await login(eka, "gita@test.local", "Rahasia123");
     await loggedIn(eka);
     await eka.goto(`${BASE}/absensi`);
-    await eka.getByText("Hari ini libur: HUT kantor (uji).").waitFor();
+    await eka.locator("main").getByText("Hari ini libur: HUT kantor (uji).").waitFor();
     check("absensi diblokir di hari libur", (await eka.getByRole("button", { name: "Absen masuk" }).count()) === 0);
     check("form izin/sakit disembunyikan di hari libur", (await eka.locator("#f-note").count()) === 0);
     await web.goto(`${BASE}/admin`);

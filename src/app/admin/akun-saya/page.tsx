@@ -3,6 +3,8 @@ import { changePassword, updateAccountName } from "@/actions/profile";
 import { ActionForm, Field } from "@/components/ui/form";
 import { Avatar, Badge, Card, CardTitle, PageHeader } from "@/components/ui/ui";
 import { requireAdmin } from "@/lib/auth";
+import { ReminderSettings } from "@/components/reminder-settings";
+import { vapidPublicKey } from "@/lib/push";
 import { roleLabel } from "@/lib/labels";
 
 export const metadata: Metadata = { title: "Akun saya" };
@@ -47,6 +49,11 @@ export default async function MyAccountPage() {
             />
             <Field label="Ulangi password baru" name="confirm" type="password" autoComplete="new-password" />
           </ActionForm>
+        </Card>
+
+        <Card className="h-fit xl:col-span-2 xl:col-start-2">
+          <CardTitle title="Notifikasi" hint="Kabar pendaftaran baru dan laporan izin/sakit dari peserta tim Anda." />
+          <ReminderSettings vapidKey={vapidPublicKey()} remindersEnabled={false} showDailyToggle={false} workStart="" workEnd="" />
         </Card>
       </div>
     </>

@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from "react";
 import { AccountCard, AccountCardSkeleton, ShellFrame } from "@/components/shell";
 import { requireIntern } from "@/lib/auth";
+import { DailySteps, DailyStepsSkeleton } from "@/components/daily-steps";
 
 export default function InternLayout({ children }: { children: ReactNode }) {
   return (
@@ -9,6 +10,11 @@ export default function InternLayout({ children }: { children: ReactNode }) {
       account={
         <Suspense fallback={<AccountCardSkeleton />}>
           <InternAccount />
+        </Suspense>
+      }
+      banner={
+        <Suspense fallback={<DailyStepsSkeleton />}>
+          <DailySteps />
         </Suspense>
       }
     >
