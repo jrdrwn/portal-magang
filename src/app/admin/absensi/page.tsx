@@ -240,7 +240,7 @@ export default async function AdminAttendance({ searchParams }: PageProps<"/admi
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="transition hover:bg-canvas/50">
-                  <Td>
+                  <Td primary>
                     <Link href={`/admin/peserta/${r.id}`} className="flex items-center gap-3 hover:underline">
                       <Avatar name={r.name} size="sm" />
                       <span>
@@ -249,13 +249,13 @@ export default async function AdminAttendance({ searchParams }: PageProps<"/admi
                       </span>
                     </Link>
                   </Td>
-                  <Td>
+                  <Td label="Status">
                     <span className="flex flex-wrap gap-1">
                       <Badge tone={r.status.tone}>{r.status.label}</Badge>
                       {r.corrected ? <Badge tone="brand">Dikoreksi</Badge> : null}
                     </span>
                   </Td>
-                  <Td className="whitespace-nowrap">
+                  <Td label="Masuk" className="whitespace-nowrap">
                     {formatTime(r.checkIn)}
                     {r.inPhoto && r.attId ? (
                       <a href={`/api/berkas/absen/${r.attId}/masuk`} target="_blank" rel="noreferrer" aria-label={`Swafoto masuk ${r.name}`} className="ml-1.5 inline-flex align-middle text-brand-600">
@@ -263,7 +263,7 @@ export default async function AdminAttendance({ searchParams }: PageProps<"/admi
                       </a>
                     ) : null}
                   </Td>
-                  <Td className="whitespace-nowrap">
+                  <Td label="Pulang" className="whitespace-nowrap">
                     {formatTime(r.checkOut)}
                     {r.outPhoto && r.attId ? (
                       <a href={`/api/berkas/absen/${r.attId}/pulang`} target="_blank" rel="noreferrer" aria-label={`Swafoto pulang ${r.name}`} className="ml-1.5 inline-flex align-middle text-brand-600">
@@ -271,8 +271,8 @@ export default async function AdminAttendance({ searchParams }: PageProps<"/admi
                       </a>
                     ) : null}
                   </Td>
-                  <Td>{r.distance != null ? formatDistance(r.distance) : "-"}</Td>
-                  <Td>
+                  <Td label="Jarak">{r.distance != null ? formatDistance(r.distance) : "-"}</Td>
+                  <Td label="Keterangan">
                     {r.lat != null && r.lng != null ? (
                       <a
                         href={mapsUrl(r.lat, r.lng)}
@@ -286,7 +286,7 @@ export default async function AdminAttendance({ searchParams }: PageProps<"/admi
                       (r.note ?? "-")
                     )}
                   </Td>
-                  <Td className="text-right">
+                  <Td actions className="text-right">
                     {!isFuture ? (
                       <Link
                         href={`/admin/peserta/${r.id}/koreksi/${dateToKey(date)}`}

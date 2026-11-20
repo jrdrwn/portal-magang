@@ -38,7 +38,7 @@ export function AttendanceDays({
     return <EmptyState title="Belum ada riwayat" description="Riwayat kehadiran tampil setelah periode magang dimulai." />;
   }
   return (
-    <Table className={maxHeight ? "max-h-[28rem] overflow-y-auto" : undefined}>
+    <Table className={maxHeight ? "md:max-h-[28rem] md:overflow-y-auto" : undefined}>
       <thead>
         <tr>
           <Th>Tanggal</Th>
@@ -56,11 +56,11 @@ export function AttendanceDays({
           const quiet = r.status === "HOLIDAY" || r.status === "OFF";
           return (
             <tr key={r.key} className={quiet ? "text-muted" : undefined}>
-              <Td className="whitespace-nowrap">
+              <Td primary className="whitespace-nowrap">
                 <span className="block font-medium">{formatDate(r.date)}</span>
                 <span className="text-xs text-muted">{formatWeekday(r.date)}</span>
               </Td>
-              <Td>
+              <Td label="Status">
                 <span className="flex flex-wrap items-center gap-1">
                   <StatusBadge row={r} />
                   {a?.correctedAt ? (
@@ -70,7 +70,7 @@ export function AttendanceDays({
                   ) : null}
                 </span>
               </Td>
-              <Td className="whitespace-nowrap">
+              <Td label="Masuk" className="whitespace-nowrap">
                 {formatTime(a?.checkInAt)}
                 {a?.checkInPhotoKey ? (
                   <a
@@ -84,7 +84,7 @@ export function AttendanceDays({
                   </a>
                 ) : null}
               </Td>
-              <Td className="whitespace-nowrap">
+              <Td label="Pulang" className="whitespace-nowrap">
                 {formatTime(a?.checkOutAt)}
                 {a?.checkOutPhotoKey ? (
                   <a
@@ -98,7 +98,7 @@ export function AttendanceDays({
                   </a>
                 ) : null}
               </Td>
-              <Td className="whitespace-nowrap">
+              <Td label="Lokasi" className="whitespace-nowrap">
                 {a?.checkInLat != null && a.checkInLng != null ? (
                   <a
                     href={mapsUrl(a.checkInLat, a.checkInLng)}
@@ -113,9 +113,9 @@ export function AttendanceDays({
                   "-"
                 )}
               </Td>
-              <Td className="text-sm">{r.holidayName ?? a?.note ?? "-"}</Td>
+              <Td label="Keterangan" className="text-sm">{r.holidayName ?? a?.note ?? "-"}</Td>
               {correctBase ? (
-                <Td className="text-right">
+                <Td actions className="text-right">
                   {r.status !== "OFF" ? (
                     <Link
                       href={`${correctBase}/${r.key}`}

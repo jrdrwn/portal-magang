@@ -162,7 +162,7 @@ export default async function InternsPage({ searchParams }: PageProps<"/admin/pe
                 const latest = u.registrations.find((r) => r.status === "APPROVED") ?? u.registrations[0];
                 return (
                   <tr key={u.id} className="transition hover:bg-canvas/50">
-                    <Td>
+                    <Td primary>
                       <Link href={`/admin/peserta/${u.id}`} className="flex items-center gap-3 hover:underline">
                         <Avatar name={u.name} size="sm" />
                         <span>
@@ -171,8 +171,8 @@ export default async function InternsPage({ searchParams }: PageProps<"/admin/pe
                         </span>
                       </Link>
                     </Td>
-                    <Td>{u.profile?.institution ?? "-"}</Td>
-                    <Td>
+                    <Td label="Asal">{u.profile?.institution ?? "-"}</Td>
+                    <Td label="Periode terakhir">
                       {latest ? (
                         <>
                           <span className="block font-medium">
@@ -189,10 +189,10 @@ export default async function InternsPage({ searchParams }: PageProps<"/admin/pe
                         "-"
                       )}
                     </Td>
-                    <Td>
+                    <Td label="Status">
                       <Badge tone={state.tone}>{state.label}</Badge>
                     </Td>
-                    <Td className="text-right font-semibold">{u._count.attendances}</Td>
+                    <Td label="Absensi" className="text-right font-semibold">{u._count.attendances}</Td>
                   </tr>
                 );
               })}

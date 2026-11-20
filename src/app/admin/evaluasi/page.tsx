@@ -146,7 +146,7 @@ export default async function EvaluationsPage({ searchParams }: PageProps<"/admi
                 const g = avg != null ? grade(avg) : null;
                 return (
                   <tr key={r.id}>
-                    <Td>
+                    <Td primary>
                       <Link href={`/admin/peserta/${r.user.id}`} className="flex items-center gap-3 hover:underline">
                         <Avatar name={r.user.name} size="sm" />
                         <span>
@@ -155,18 +155,18 @@ export default async function EvaluationsPage({ searchParams }: PageProps<"/admi
                         </span>
                       </Link>
                     </Td>
-                    <Td>
+                    <Td label="Tim">
                       <span className="block font-medium">{r.team.name}</span>
                       <span className="text-xs text-muted">{internshipTypeInfo[r.type].label}</span>
                     </Td>
-                    <Td className="text-xs">
+                    <Td label="Kehadiran" className="text-xs">
                       <span className="font-semibold">{(sumOf(r.userId)?.present ?? 0) + (sumOf(r.userId)?.late ?? 0)}</span> hadir ·{" "}
                       {sumOf(r.userId)?.late ?? 0} terlambat · {(sumOf(r.userId)?.permit ?? 0) + (sumOf(r.userId)?.sick ?? 0)} izin/sakit ·{" "}
                       <span className={(sumOf(r.userId)?.absent ?? 0) > 0 ? "font-semibold text-[#a0153f]" : undefined}>
                         {sumOf(r.userId)?.absent ?? 0} alpa
                       </span>
                     </Td>
-                    <Td>
+                    <Td label="Nilai">
                       {g ? (
                         <span className="flex items-center gap-2">
                           <span className="font-bold">{avg}</span>
@@ -176,7 +176,7 @@ export default async function EvaluationsPage({ searchParams }: PageProps<"/admi
                         <Badge tone="warning">Belum dinilai</Badge>
                       )}
                     </Td>
-                    <Td className="text-right">
+                    <Td actions className="text-right">
                       <ButtonLink
                         href={`/admin/evaluasi/${r.id}?month=${month}`}
                         variant={e ? "soft" : "primary"}

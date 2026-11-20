@@ -148,8 +148,8 @@ export default async function AuditLogPage({ searchParams }: PageProps<"/admin/l
             <tbody>
               {logs.map((l) => (
                 <tr key={l.id}>
-                  <Td className="whitespace-nowrap text-xs text-muted">{fmt.format(l.createdAt).replace(".", ":")}</Td>
-                  <Td>
+                  <Td primary className="whitespace-nowrap text-xs text-muted">{fmt.format(l.createdAt).replace(".", ":")}</Td>
+                  <Td label="Admin">
                     {l.actor ? (
                       <span className="flex items-center gap-2">
                         <Avatar name={l.actor.name} size="sm" />
@@ -162,8 +162,8 @@ export default async function AuditLogPage({ searchParams }: PageProps<"/admin/l
                       <span className="text-muted">Akun dihapus</span>
                     )}
                   </Td>
-                  <Td className="font-medium">{AUDIT_ACTIONS[l.action as AuditAction] ?? l.action}</Td>
-                  <Td className="text-sm">{l.summary}</Td>
+                  <Td label="Tindakan" className="font-medium">{AUDIT_ACTIONS[l.action as AuditAction] ?? l.action}</Td>
+                  <Td label="Keterangan" className="text-sm">{l.summary}</Td>
                 </tr>
               ))}
             </tbody>

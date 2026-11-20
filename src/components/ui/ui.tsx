@@ -221,10 +221,23 @@ export function ButtonLink({
 export const inputClass =
   "w-full rounded-2xl border border-line bg-canvas/60 px-4 py-3 text-sm outline-none transition placeholder:text-muted/70 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100 disabled:opacity-60";
 
+/**
+ * Tabel responsif. Di layar lebar: tabel biasa dengan scroll ke samping.
+ * Di HP (< md): setiap baris tampil sebagai kartu; sel pakai `label` (judul kolom),
+ * sel pertama `primary` menjadi judul kartu, dan sel `actions` ditaruh di bawah.
+ */
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={clsx("-mx-2 overflow-x-auto px-2", className)}>
-      <table className="w-full min-w-[640px] text-left text-sm">{children}</table>
+    <div className={clsx("md:-mx-2 md:overflow-x-auto md:px-2", className)}>
+      <table
+        className={clsx(
+          "w-full text-left text-sm md:min-w-[640px]",
+          "max-md:block max-md:[&_thead]:hidden max-md:[&_tbody]:flex max-md:[&_tbody]:flex-col max-md:[&_tbody]:gap-3",
+          "max-md:[&_tbody>tr]:block max-md:[&_tbody>tr]:rounded-3xl max-md:[&_tbody>tr]:border max-md:[&_tbody>tr]:border-line max-md:[&_tbody>tr]:bg-canvas/40 max-md:[&_tbody>tr]:px-4 max-md:[&_tbody>tr]:py-3",
+        )}
+      >
+        {children}
+      </table>
     </div>
   );
 }
@@ -242,10 +255,39 @@ export function Th({ children, className }: { children?: ReactNode; className?: 
   );
 }
 
-export function Td({ children, className }: { children?: ReactNode; className?: string }) {
+export function Td({
+  children,
+  className,
+  label,
+  primary,
+  actions,
+}: {
+  children?: ReactNode;
+  className?: string;
+  /** Judul kolom, ditampilkan di samping nilai pada tampilan kartu (HP). */
+  label?: string;
+  /** Sel judul kartu di HP. */
+  primary?: boolean;
+  /** Sel tombol aksi; di HP ditaruh di bawah kartu, rata kanan. */
+  actions?: boolean;
+}) {
   return (
-    <td className={clsx("border-t border-line px-3 py-3 align-middle", className)}>
-      {children}
+    <td
+      className={clsx(
+        "border-t border-line px-3 py-3 align-middle",
+        "max-md:border-0 max-md:px-0",
+        primary
+          ? "max-md:block max-md:pb-2 max-md:pt-0 max-md:text-base"
+          : actions
+            ? "max-md:mt-1 max-md:flex max-md:justify-end max-md:border-t max-md:border-line max-md:pb-0 max-md:pt-3 max-md:text-right"
+            : "max-md:flex max-md:items-baseline max-md:justify-between max-md:gap-4 max-md:py-1.5 max-md:text-right",
+        className,
+      )}
+    >
+      {label && !primary && !actions ? (
+        <span className="shrink-0 text-left text-xs font-medium text-muted md:hidden">{label}</span>
+      ) : null}
+      {label && !primary && !actions ? <span className="min-w-0 max-md:break-words">{children}</span> : children}
     </td>
   );
 }

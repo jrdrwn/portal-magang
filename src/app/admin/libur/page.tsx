@@ -128,15 +128,15 @@ export default async function HolidaysPage({ searchParams }: PageProps<"/admin/l
               <tbody>
                 {holidays.map((h) => (
                   <tr key={h.id}>
-                    <Td className="whitespace-nowrap">
+                    <Td primary className="whitespace-nowrap">
                       <span className="block font-semibold">{formatDate(h.date, "long")}</span>
                       <span className="text-xs text-muted">{formatWeekday(h.date)}</span>
                     </Td>
-                    <Td>{h.name}</Td>
-                    <Td>
+                    <Td label="Keterangan">{h.name}</Td>
+                    <Td label="Jenis">
                       <Badge tone={kindLabel[h.kind].tone}>{kindLabel[h.kind].label}</Badge>
                     </Td>
-                    <Td className="text-right">
+                    <Td actions className="text-right">
                       <ActionButton
                         action={deleteHoliday.bind(null, h.id)}
                         variant="danger"
