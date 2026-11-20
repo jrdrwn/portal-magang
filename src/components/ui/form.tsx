@@ -8,6 +8,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   useTransition,
   type ComponentProps,
   type ReactNode,
@@ -49,6 +50,12 @@ export function FormMessage({ result }: { result: ActionResult | null }) {
 
 type FormAction = (formData: FormData) => Promise<ActionResult>;
 
+const noop = () => () => {};
+/** true setelah komponen client aktif; tombol kirim dinonaktifkan sebelum itu. */
+function useHydrated() {
+  return useSyncExternalStore(noop, () => true, () => false);
+}
+
 /**
  * Form dengan Server Action. Isian tidak direset saat validasi gagal.
  * `resetOnSuccess` mengosongkan form setelah berhasil.
@@ -77,11 +84,14 @@ export function ActionForm({
   const [result, setResult] = useState<ActionResult | null>(null);
   const [pending, startTransition] = useTransition();
   const ref = useRef<HTMLFormElement>(null);
+  const hydrated = useHydrated();
 
   return (
     <FormContext value={{ result, pending, idPrefix }}>
+      {/* method=post: kalau terkirim sebelum JS siap, isian (mis. password) tidak masuk ke URL. */}
       <form
         ref={ref}
+        method="post"
         noValidate
         className={clsx("space-y-4", className)}
         onSubmit={(e) => {
@@ -107,7 +117,7 @@ export function ActionForm({
         <div className="flex flex-wrap items-center gap-3 pt-1">
           <button
             type="submit"
-            disabled={pending}
+            disabled={pending || !hydrated}
             className={clsx(btn.base, btn[variant], submitClassName)}
           >
             {pending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
