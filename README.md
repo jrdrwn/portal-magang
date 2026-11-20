@@ -32,6 +32,8 @@ Next.js 16 (App Router, Cache Components) + Prisma 7 + PostgreSQL + Tailwind CSS
 **Admin tim** (`TEAM_ADMIN`), hanya untuk timnya
 - Ringkasan harian, setujui/tolak pendaftaran, daftar dan detail peserta
 - Monitor absensi dan aktivitas per tanggal
+- **Langkah hari ini** untuk admin: tinjau pendaftaran → cek kehadiran (setelah batas terlambat) → periksa aktivitas (setelah jam pulang), plus evaluasi bulanan di akhir/awal bulan. Dihitung dari data timnya
+- Pengingat admin (bisa dimatikan di Akun saya): pendaftaran menunggu, peserta belum absen 30 menit setelah batas terlambat, evaluasi belum lengkap (tgl 25+ dan tgl 1–5)
 - Notifikasi: pendaftaran baru di timnya, laporan izin/sakit peserta
 - Hasil survei akhir: rata-rata per pertanyaan dan semua jawaban
 - Koreksi absensi per hari (status, jam, keterangan, alasan wajib) — tercatat di log dan dikabarkan ke peserta
