@@ -36,6 +36,9 @@ export function NotificationBell({ allHref }: { allHref: string }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [unread, setUnread] = useState(0);
+  // Bertambah tiap kali jumlah belum dibaca naik → ikon lonceng bergoyang sekali.
+  const [ring, setRing] = useState(0);
+  const lastUnread = useRef<number | null>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -58,6 +61,8 @@ export function NotificationBell({ allHref }: { allHref: string }) {
       const data = (await res.json()) as { items: Item[]; unread: number };
       setItems(data.items);
       setUnread(data.unread);
+      if (lastUnread.current !== null && data.unread > lastUnread.current) setRing((r) => r + 1);
+      lastUnread.current = data.unread;
     } catch {
       // Abaikan: dicoba lagi pada polling berikutnya.
     }
@@ -124,11 +129,19 @@ export function NotificationBell({ allHref }: { allHref: string }) {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={unread ? `Notifikasi, ${unread} belum dibaca` : "Notifikasi"}
-        className="relative grid size-10 place-items-center rounded-full bg-canvas text-ink transition hover:bg-brand-50"
+        className="relative grid size-10 place-items-center rounded-full bg-canvas text-ink transition hover:bg-brand-50 active:scale-90"
       >
-        <Bell className="size-[18px]" aria-hidden />
+        <Bell
+          key={ring}
+          data-ring={ring}
+          className={clsx("size-[18px] origin-top", ring > 0 && "animate-wiggle")}
+          aria-hidden
+        />
         {unread > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-[#e0527a] px-1 text-[10px] font-bold leading-5 text-white ring-2 ring-surface">
+          <span
+            key={unread}
+            data-testid="lonceng-badge"
+            className="animate-pop absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-[#e0527a] px-1 text-[10px] font-bold leading-5 text-white ring-2 ring-surface">
             {unread > 9 ? "9+" : unread}
           </span>
         ) : null}
@@ -141,7 +154,7 @@ export function NotificationBell({ allHref }: { allHref: string }) {
           role="dialog"
           aria-label="Notifikasi"
           style={{ top: pos.top, left: pos.left }}
-          className="fixed z-[60] w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-3xl border border-line bg-white shadow-[0_16px_50px_rgb(21_20_31/0.18)]"
+          className="animate-pop-in fixed z-[60] origin-top w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-3xl border border-line bg-white shadow-[0_16px_50px_rgb(21_20_31/0.18)]"
         >
           <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
             <p className="text-sm font-bold">Notifikasi</p>

@@ -5,6 +5,8 @@ export type ActionResult = {
   message?: string;
   error?: string;
   fieldErrors?: Record<string, string[] | undefined>;
+  /** Nilai yang bisa disalin dari pesan sukses (mis. password sementara). */
+  copy?: string;
 };
 
 export const success = (message?: string): ActionResult => ({

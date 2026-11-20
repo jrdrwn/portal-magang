@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Award, CalendarClock, ClipboardList, ExternalLink, FileText } from "lucide-react";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Badge, ButtonLink, Card, EmptyState, PageHeader } from "@/components/ui/ui";
 import { requireIntern } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -73,8 +74,11 @@ export default async function CertificatesPage() {
                       <div className="min-w-0 text-sm">
                         <p className="font-semibold">No. {r.certificate.number}</p>
                         <p className="text-muted">Terbit {formatDate(r.certificate.issuedAt)}</p>
-                        <p className="mt-1 text-muted">
-                          Kode verifikasi <span className="font-mono font-semibold text-ink">{r.certificate.code}</span>
+                        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted">
+                          <span>
+                            Kode verifikasi <span className="font-mono font-semibold text-ink">{r.certificate.code}</span>
+                          </span>
+                          <CopyButton value={r.certificate.code} label="Salin kode" className="bg-white" />
                         </p>
                       </div>
                     </div>

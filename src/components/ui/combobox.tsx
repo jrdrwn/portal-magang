@@ -256,7 +256,7 @@ export function Combobox({
           id={listId}
           role="listbox"
           aria-label={ariaLabel}
-          className="absolute inset-x-0 top-full z-50 mt-2 max-h-64 overflow-auto rounded-2xl border border-line bg-white p-1.5 shadow-[0_12px_40px_rgb(21_20_31/0.14)]"
+          className="animate-pop-in absolute inset-x-0 top-full z-50 mt-2 origin-top max-h-64 overflow-auto rounded-2xl border border-line bg-white p-1.5 shadow-[0_12px_40px_rgb(21_20_31/0.14)]"
         >
           {shown.length === 0 ? (
             <li className="px-3 py-2.5 text-sm text-muted">{emptyText}</li>

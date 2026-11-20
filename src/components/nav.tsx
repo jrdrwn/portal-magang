@@ -124,7 +124,7 @@ function SideLink({ item, active, onNavigate }: { item: Item; active: boolean; o
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={clsx(
-        "flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-semibold transition",
+        "flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-semibold transition duration-200 active:scale-[0.97]",
         active ? "bg-ink text-white shadow-lg shadow-ink/20" : "text-muted hover:bg-canvas hover:text-ink",
       )}
     >
@@ -191,11 +191,11 @@ function TabLink({ item, active }: { item: Item; active: boolean }) {
       <Link
         href={item.href}
         aria-current={active ? "page" : undefined}
-        className="flex min-w-0 flex-1 flex-col items-center gap-1 px-1 text-[11px] font-semibold"
+        className="group flex min-w-0 flex-1 flex-col items-center gap-1 px-1 text-[11px] font-semibold"
       >
         <span
           className={clsx(
-            "-mt-6 grid size-14 place-items-center rounded-full shadow-lg ring-4 ring-surface transition",
+            "-mt-6 grid size-14 place-items-center rounded-full shadow-lg ring-4 ring-surface transition duration-200 group-active:scale-90",
             active ? "bg-ink text-white shadow-ink/30" : "bg-brand-600 text-white shadow-brand-600/30",
           )}
         >
@@ -210,7 +210,7 @@ function TabLink({ item, active }: { item: Item; active: boolean }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={clsx(
-        "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[11px] font-semibold transition",
+        "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[11px] font-semibold transition duration-200 active:scale-95",
         active ? "bg-ink text-white" : "text-muted",
       )}
     >
@@ -256,7 +256,7 @@ export function BottomNav(props: NavProps) {
           type="button"
           onClick={() => dialog.current?.showModal()}
           aria-haspopup="dialog"
-          className="relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[11px] font-semibold text-muted transition"
+          className="relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[11px] font-semibold text-muted transition duration-200 active:scale-95"
         >
           <LayoutGrid className="size-5" aria-hidden />
           <span>Menu</span>
@@ -270,7 +270,7 @@ export function BottomNav(props: NavProps) {
         ref={dialog}
         aria-label="Semua menu"
         onClick={(e) => e.target === dialog.current && close()}
-        className="m-0 mt-auto max-h-[85dvh] w-full max-w-none rounded-t-[2rem] bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/40 lg:hidden"
+        className="m-0 mt-auto max-h-[85dvh] w-full max-w-none rounded-t-[2rem] bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/40 open:animate-sheet-up lg:hidden"
       >
         <div className="sticky top-0 flex items-center justify-between bg-surface px-5 pb-2 pt-4">
           <p className="text-base font-bold">Menu</p>

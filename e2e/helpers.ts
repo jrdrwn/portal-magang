@@ -39,8 +39,13 @@ export async function resetDemoAccounts() {
 export const dateKey = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(d);
 export const plusDays = (n: number) => dateKey(new Date(Date.now() + n * 86_400_000));
 
-export async function newSession(browser: Browser, viewport = { width: 1360, height: 900 }, geo = OFFICE) {
-  const ctx = await browser.newContext({ viewport, permissions: ["geolocation", "camera"], geolocation: geo });
+export async function newSession(
+  browser: Browser,
+  viewport = { width: 1360, height: 900 },
+  geo = OFFICE,
+  { reducedMotion = "reduce" }: { reducedMotion?: "reduce" | "no-preference" } = {},
+) {
+  const ctx = await browser.newContext({ viewport, permissions: ["geolocation", "camera"], geolocation: geo, reducedMotion });
   const page = await ctx.newPage();
   return { ctx, page };
 }

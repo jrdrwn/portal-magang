@@ -79,6 +79,9 @@ export function AttendancePanel({
   const [geoError, setGeoError] = useState<string | null>(null);
   const [result, setResult] = useState<ActionResult | null>(null);
   const [pending, startTransition] = useTransition();
+  // Nilai saat halaman dibuka: jam yang baru tercatat setelahnya diberi animasi "pop".
+  const [initialIn] = useState(checkInTime);
+  const [initialOut] = useState(checkOutTime);
 
   const tracking = mode === "checkin" || mode === "checkout";
   const [photo, setPhoto] = useState<Blob | null>(null);
@@ -146,11 +149,23 @@ export function AttendancePanel({
         <div className="mt-6 grid grid-cols-2 gap-3 sm:max-w-md">
           <div className="rounded-3xl bg-white/10 p-4">
             <p className="text-xs text-white/60">Absen masuk</p>
-            <p className="mt-1 text-xl font-semibold">{checkInTime ?? "-"}</p>
+            <p
+              key={checkInTime ?? "-"}
+              data-baru={checkInTime && checkInTime !== initialIn ? "" : undefined}
+              className={clsx("mt-1 w-fit text-xl font-semibold", checkInTime && checkInTime !== initialIn && "animate-pop text-lime")}
+            >
+              {checkInTime ?? "-"}
+            </p>
           </div>
           <div className="rounded-3xl bg-white/10 p-4">
             <p className="text-xs text-white/60">Absen pulang</p>
-            <p className="mt-1 text-xl font-semibold">{checkOutTime ?? "-"}</p>
+            <p
+              key={checkOutTime ?? "-"}
+              data-baru={checkOutTime && checkOutTime !== initialOut ? "" : undefined}
+              className={clsx("mt-1 w-fit text-xl font-semibold", checkOutTime && checkOutTime !== initialOut && "animate-pop text-lime")}
+            >
+              {checkOutTime ?? "-"}
+            </p>
           </div>
         </div>
       </div>
@@ -194,7 +209,7 @@ export function AttendancePanel({
             {blockedReason}
           </p>
         ) : mode === "done" ? (
-          <p className="rounded-2xl bg-lime/20 p-4 text-sm font-medium text-lime">
+          <p className="animate-pop-in rounded-2xl bg-lime/20 p-4 text-sm font-medium text-lime">
             Absensi hari ini sudah lengkap. Sampai jumpa besok!
           </p>
         ) : (

@@ -1,4 +1,4 @@
-import { test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { BASE, check, resetDemoAccounts, shotsDir, sql, uploadDocs } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
@@ -86,8 +86,16 @@ async function waitBell(page: Page, min: number) {
   await s.getByRole("option", { name: "MagangHub" }).click();
   await s.getByRole("button", { name: "Cari" }).click();
   await s.waitForURL(/type=MAGANGHUB/);
-  const rows = await s.locator("tbody").innerText();
-  check("combobox filter jenis: hanya MagangHub", rows.includes("Raka") && !rows.includes("Nadia"));
+  // Tunggu hasil stream selesai menggantikan tabel lama (segmen yang masih streaming tersembunyi).
+  const visibleRows = s.locator("tbody").filter({ visible: true });
+  const filtered = await expect
+    .poll(async () => {
+      const t = (await visibleRows.count()) === 1 ? await visibleRows.innerText() : "";
+      return t.includes("Raka") && !t.includes("Nadia");
+    }, { timeout: 15_000 })
+    .toBe(true)
+    .then(() => true, () => false);
+  check("combobox filter jenis: hanya MagangHub", filtered);
 
   // ---------- Peserta baru -> notifikasi admin ----------
   const eka = await session();

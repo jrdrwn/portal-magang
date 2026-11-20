@@ -15,6 +15,7 @@ import {
 } from "react";
 import type { ActionResult } from "@/lib/action-result";
 import { Combobox } from "./combobox";
+import { CopyButton } from "./copy-button";
 import { btn, inputClass } from "./ui";
 
 const FormContext = createContext<{
@@ -29,9 +30,14 @@ export function FormMessage({ result }: { result: ActionResult | null }) {
     return (
       <p
         role="status"
-        className="rounded-2xl bg-lime/50 px-4 py-3 text-sm font-medium text-[#2d4a00]"
+        key={result.message}
+        className="flex animate-pop-in items-start gap-2 rounded-2xl bg-lime/50 px-4 py-3 text-sm font-medium text-[#2d4a00]"
       >
-        {result.message}
+        <svg viewBox="0 0 24 24" aria-hidden className="mt-px size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 12.5l4.5 4.5L19 7.5" strokeDasharray={24} className="animate-draw" />
+        </svg>
+        <span className="min-w-0 flex-1">{result.message}</span>
+        {result.copy ? <CopyButton value={result.copy} /> : null}
       </p>
     );
   }
@@ -39,7 +45,8 @@ export function FormMessage({ result }: { result: ActionResult | null }) {
     return (
       <p
         role="alert"
-        className="rounded-2xl bg-rose px-4 py-3 text-sm font-medium text-[#a0153f]"
+        key={`${result.error}-${Object.keys(result.fieldErrors ?? {}).join()}`}
+        className="animate-shake rounded-2xl bg-rose px-4 py-3 text-sm font-medium text-[#a0153f]"
       >
         {result.error}
       </p>
@@ -176,7 +183,7 @@ export function Field(
         <input {...common} {...(rest as ComponentProps<"input">)} />
       )}
       {errors?.length ? (
-        <p id={`${id}-err`} className="mt-1.5 text-xs font-medium text-[#a0153f]">
+        <p id={`${id}-err`} className="mt-1.5 animate-pop-in text-xs font-medium text-[#a0153f]">
           {errors[0]}
         </p>
       ) : hint ? (
@@ -236,9 +243,11 @@ export function ActionButton({
       {showSuccess && result?.ok && result.message ? (
         <span
           role="status"
-          className="max-w-md select-all rounded-2xl bg-lime/50 px-3 py-2 text-xs font-medium text-[#2d4a00]"
+          key={result.message}
+          className="flex max-w-md animate-pop-in items-start gap-2 rounded-2xl bg-lime/50 px-3 py-2 text-xs font-medium text-[#2d4a00]"
         >
-          {result.message}
+          <span className="min-w-0 flex-1 select-all">{result.message}</span>
+          {result.copy ? <CopyButton value={result.copy} /> : null}
         </span>
       ) : null}
     </span>
@@ -274,7 +283,7 @@ export function ChoiceGroup({
           <label
             key={o.value}
             className={clsx(
-              "flex cursor-pointer items-start gap-3 rounded-2xl border bg-canvas/60 p-3.5 transition",
+              "flex cursor-pointer items-start gap-3 rounded-2xl border bg-canvas/60 p-3.5 transition duration-200 ease-out active:scale-[0.98] has-checked:scale-[1.01]",
               "has-checked:border-brand-500 has-checked:bg-brand-50 has-checked:ring-4 has-checked:ring-brand-100",
               "has-focus-visible:outline-2 has-focus-visible:outline-brand-500",
               errors?.length ? "border-[#e0527a]" : "border-line hover:border-brand-200",
@@ -398,7 +407,7 @@ export function RatingField({ label, name }: { label: string; name: string }) {
           <label
             key={text}
             className={clsx(
-              "flex cursor-pointer flex-col items-center gap-1 rounded-2xl border bg-canvas/60 px-1 py-2.5 text-center transition",
+              "flex cursor-pointer flex-col items-center gap-1 rounded-2xl border bg-canvas/60 px-1 py-2.5 text-center transition duration-200 ease-out active:scale-95 has-checked:-translate-y-0.5 has-checked:shadow-lg has-checked:shadow-brand-600/25",
               "has-checked:border-brand-500 has-checked:bg-brand-600 has-checked:text-white",
               "has-focus-visible:outline-2 has-focus-visible:outline-brand-500",
               errors?.length ? "border-[#e0527a]" : "border-line hover:border-brand-200",

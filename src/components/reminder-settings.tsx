@@ -139,15 +139,26 @@ export function ReminderSettings({
                 `Absen masuk (menjelang ${workStart}), catat aktivitas, dan absen pulang (setelah ${workEnd}). Tidak dikirim di hari libur atau saat izin/sakit.`}
             </span>
           </span>
-          <input
-            type="checkbox"
-            role="switch"
-            checked={daily}
-            disabled={pending}
-            onChange={(e) => toggleDaily(e.target.checked)}
-            aria-label="Pengingat harian"
-            className="mt-1 size-5 shrink-0 accent-brand-600"
-          />
+          <span className="relative mt-0.5 inline-flex shrink-0">
+            <input
+              type="checkbox"
+              role="switch"
+              checked={daily}
+              disabled={pending}
+              onChange={(e) => toggleDaily(e.target.checked)}
+              aria-label="Pengingat harian"
+              className="peer absolute inset-0 z-10 cursor-pointer opacity-0 disabled:cursor-wait"
+            />
+            <span
+              aria-hidden
+              className="h-6 w-11 rounded-full bg-line transition-colors duration-200 peer-checked:bg-brand-600 peer-focus-visible:ring-4 peer-focus-visible:ring-brand-100 peer-disabled:opacity-60"
+            />
+            <span
+              aria-hidden
+              data-testid="switch-knob"
+              className="absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform duration-200 ease-[var(--ease-spring)] peer-checked:translate-x-5 peer-active:scale-90"
+            />
+          </span>
         </label>
       ) : null}
 

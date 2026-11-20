@@ -47,7 +47,10 @@ export async function resetPassword(userId: string): Promise<ActionResult> {
     teamId: admin.role === "TEAM_ADMIN" ? admin.teamId : null,
   });
   revalidatePath("/admin", "layout");
-  return success(
-    `Password sementara untuk ${target.email}: ${password} — sampaikan ke pemilik akun dan minta segera menggantinya. Password ini tidak ditampilkan lagi.`,
-  );
+  return {
+    ...success(
+      `Password sementara untuk ${target.email}: ${password} — sampaikan ke pemilik akun dan minta segera menggantinya. Password ini tidak ditampilkan lagi.`,
+    ),
+    copy: password,
+  };
 }

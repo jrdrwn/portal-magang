@@ -191,7 +191,7 @@ export function Avatar({
 }
 
 export const btn = {
-  base: "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-50",
+  base: "inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition duration-150 ease-out active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100",
   primary: "bg-ink text-white hover:bg-ink/85",
   brand: "bg-brand-600 text-white hover:bg-brand-700",
   soft: "bg-brand-50 text-brand-700 hover:bg-brand-100",

@@ -30,6 +30,8 @@ export default defineConfig({
     viewport: { width: 1360, height: 900 },
     actionTimeout: 30_000,
     navigationTimeout: 30_000,
+    // Suite lama berjalan tanpa animasi agar stabil; 10-microinteraction menguji dengan animasi.
+    reducedMotion: "reduce",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     launchOptions: {

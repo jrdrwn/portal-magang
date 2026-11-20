@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { ArrowRight, Check } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { Celebrate } from "@/components/celebrate";
 import type { NextStep, StepState, StripStep } from "@/lib/steps";
 
 const stepTone: Record<StepState, string> = {
@@ -20,13 +21,19 @@ function Step({ step, index, last }: { step: StripStep; index: number; last: boo
         <span
           aria-hidden
           className={clsx(
-            "absolute left-[calc(50%+1.25rem)] right-[calc(-50%+1.25rem)] top-4 h-0.5 rounded-full sm:hidden",
+            "absolute left-[calc(50%+1.25rem)] right-[calc(-50%+1.25rem)] top-4 h-0.5 rounded-full transition-colors duration-500 sm:hidden",
             step.state === "done" ? "bg-lime" : "bg-line",
           )}
         />
       ) : null}
       <span
-        className={clsx("relative z-10 grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold", stepTone[step.state])}
+        key={step.state}
+        data-step-state={step.state}
+        className={clsx(
+          "relative z-10 grid size-8 shrink-0 place-items-center rounded-full text-sm font-bold transition-colors duration-300",
+          stepTone[step.state],
+          step.state === "done" && "animate-pop",
+        )}
         aria-hidden
       >
         {step.state === "done" ? <Check className="size-4" strokeWidth={3} /> : index + 1}
@@ -42,7 +49,15 @@ function Step({ step, index, last }: { step: StripStep; index: number; last: boo
       <span className="sr-only">
         {step.state === "done" ? "selesai" : step.state === "late" ? "terlambat" : step.state === "current" ? "sekarang" : "nanti"}
       </span>
-      {!last ? <span aria-hidden className="hidden h-0.5 flex-1 rounded-full bg-line sm:block" /> : null}
+      {!last ? (
+        <span
+          aria-hidden
+          className={clsx(
+            "hidden h-0.5 flex-1 rounded-full transition-colors duration-500 sm:block",
+            step.state === "done" ? "bg-lime" : "bg-line",
+          )}
+        />
+      ) : null}
     </li>
   );
 }
@@ -64,11 +79,24 @@ export function StepsStrip({
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-sm font-bold">
           Langkah hari ini{" "}
-          <span className={clsx("ml-1 rounded-full px-2 py-0.5 text-xs", complete ? "bg-lime" : "bg-brand-50 text-brand-700")}>
+          <span
+            key={done}
+            data-testid="langkah-counter"
+            className={clsx(
+              "ml-1 inline-block rounded-full px-2 py-0.5 text-xs",
+              complete ? "bg-lime" : "bg-brand-50 text-brand-700",
+              done > 0 && "animate-pop",
+            )}
+          >
             {done}/{steps.length}
           </span>
         </p>
-        {complete ? <p className="text-xs font-semibold text-[#2d4a00]">{doneText}</p> : null}
+        {complete ? (
+          <p className="relative text-xs font-semibold text-[#2d4a00] animate-pop-in">
+            {doneText}
+            <Celebrate id={doneText} />
+          </p>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
