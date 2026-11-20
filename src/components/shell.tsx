@@ -71,14 +71,16 @@ export function ShellFrame({
   const notificationsHref = variant === "admin" ? "/admin/notifikasi" : "/notifikasi";
   return (
     <div className="mx-auto flex min-h-dvh max-w-[1500px] gap-6 p-3 lg:p-6">
-      <aside className="sticky top-6 hidden h-[calc(100dvh-3rem)] w-64 shrink-0 flex-col justify-between gap-4 overflow-y-auto rounded-card bg-surface p-5 shadow-card lg:flex">
-        <div className="space-y-6">
+      <aside className="sticky top-6 hidden h-[calc(100dvh-3rem)] w-64 shrink-0 flex-col gap-4 rounded-card bg-surface p-5 shadow-card lg:flex">
+        <div className="flex min-h-0 flex-1 flex-col gap-5">
           <div className="flex items-center justify-between gap-2">
             <Logo />
             <NotificationBell allHref={notificationsHref} />
           </div>
           {badge}
-          <SideNav variant={variant} superAdmin={superAdmin} />
+          <div className="-mx-2 min-h-0 flex-1 overflow-y-auto px-2 [scrollbar-width:thin]">
+            <SideNav variant={variant} superAdmin={superAdmin} />
+          </div>
         </div>
 
         <div className="space-y-3">

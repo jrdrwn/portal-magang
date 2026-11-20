@@ -45,7 +45,7 @@ export default async function HolidaysPage({ searchParams }: PageProps<"/admin/l
         description="Dipakai untuk absensi dan perhitungan alpa. Absen tidak bisa dilakukan di hari libur atau di luar hari kerja."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
+      <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
         <div className="h-fit space-y-6 self-start xl:sticky xl:top-6">
           <Card>
             <CardTitle title="Hari kerja" />
@@ -88,7 +88,7 @@ export default async function HolidaysPage({ searchParams }: PageProps<"/admin/l
           </Card>
         </div>
 
-        <Card>
+        <Card className="min-w-0">
           <CardTitle
             title={`Daftar libur ${year}`}
             hint={`${holidays.length} hari`}
